@@ -637,11 +637,6 @@ void ClassLoaderData::unload() {
     delete _dictionary;
     _dictionary = nullptr;
   }
-
-  if (_unnamed_module != nullptr) {
-    delete _unnamed_module;
-    _unnamed_module = nullptr;
-  }
 }
 
 ModuleEntryTable* ClassLoaderData::modules() {
@@ -751,6 +746,11 @@ ClassLoaderData::~ClassLoaderData() {
     // Destroy the table itself
     delete _packages;
     _packages = nullptr;
+  }
+
+  if (_unnamed_module != nullptr) {
+    delete _unnamed_module;
+    _unnamed_module = nullptr;
   }
 
   // release the metaspace
