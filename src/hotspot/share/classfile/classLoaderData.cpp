@@ -644,6 +644,11 @@ void ClassLoaderData::unload() {
     delete _dictionary;
     _dictionary = nullptr;
   }
+
+  if (_unnamed_module != nullptr) {
+    delete _unnamed_module;
+    _unnamed_module = nullptr;
+  }
 }
 
 ModuleEntryTable* ClassLoaderData::modules() {
@@ -747,11 +752,6 @@ ClassLoaderData::~ClassLoaderData() {
 
   // Release the WeakHandle
   _holder.release(Universe::vm_weak());
-
-  if (_unnamed_module != nullptr) {
-    delete _unnamed_module;
-    _unnamed_module = nullptr;
-  }
 
   // release the metaspace
   ClassLoaderMetaspace *m = _metaspace;
