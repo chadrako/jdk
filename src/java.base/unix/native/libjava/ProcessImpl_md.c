@@ -43,6 +43,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <spawn.h>
 
@@ -609,6 +610,10 @@ startChild(JNIEnv *env, jobject process, ChildStuff *c, const char *helperpath) 
     }
 }
 
+#ifndef VERSION_NUMBER_FOUR_POSITIONS_PADDING
+#error VERSION_NUMBER_FOUR_POSITIONS_PADDING must be defined
+#endif
+
 JNIEXPORT jint JNICALL
 Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
                                        jobject process,
@@ -630,6 +635,12 @@ Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
     const char *pargBlock = NULL;
     const char *penvBlock = NULL;
     ChildStuff *c;
+
+    char *phelperpathversion = NULL;
+    FILE *stream = NULL;
+
+    const int version_length = 20;
+    char version_data[version_length];
 
     in[0] = in[1] = out[0] = out[1] = err[0] = err[1] = fail[0] = fail[1] = -1;
     childenv[0] = childenv[1] = -1;
@@ -654,6 +665,19 @@ Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
     c->argv[0] = pprog;
     c->argc = argc + 2;
     initVectorFromBlock(c->argv+1, pargBlock, argc);
+
+    // Check that jspawnhelper is correct version
+    const char *dash_version = " -version";
+    if ((phelperpathversion = NEW(char, strlen(phelperpath) + strlen(dash_version) + 1)) == NULL) goto Catch;
+    strcpy(phelperpathversion, phelperpath);
+    strcat(phelperpathversion, dash_version);
+
+    stream = popen(phelperpathversion, "r");
+    fgets(version_data, version_length, stream);
+
+    if (strcmp(VERSION_NUMBER_FOUR_POSITIONS_PADDING, version_data) != 0) {
+        throwIOException(env, errno, "Incorrect jspawnhelper version");
+    }
 
     if (envBlock != NULL) {
         /* Convert envBlock into a char ** envv */
@@ -787,6 +811,11 @@ Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
     free(c->argv);
     free(c->envv);
     free(c);
+    free(phelperpathversion);
+
+    if (stream) {
+        pclose(stream);
+    }
 
     if (fds != NULL)
         (*env)->ReleaseIntArrayElements(env, std_fds, fds, 0);

@@ -225,6 +225,8 @@ VERSION_OPT := @VERSION_OPT@
 VERSION_NUMBER := @VERSION_NUMBER@
 # VERSION_NUMBER but always with exactly 4 positions, with 0 for empty positions.
 VERSION_NUMBER_FOUR_POSITIONS := @VERSION_NUMBER_FOUR_POSITIONS@
+# VERSION_NUMBER but always with exactly 4 positions, with 0 padding for all positions.
+VERSION_NUMBER_FOUR_POSITIONS_PADDING := @VERSION_NUMBER_FOUR_POSITIONS_PADDING@
 # The complete version string, with additional build information
 VERSION_STRING := @VERSION_STRING@
 # The short version string, without trailing zeroes and just PRE, if present.

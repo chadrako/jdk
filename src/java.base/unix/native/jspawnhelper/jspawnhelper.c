@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,6 +50,10 @@ extern int errno;
 #define ERR_MALLOC 1
 #define ERR_PIPE 2
 #define ERR_ARGS 3
+
+#ifndef VERSION_NUMBER_FOUR_POSITIONS_PADDING
+#error VERSION_NUMBER_FOUR_POSITIONS_PADDING must be defined
+#endif
 
 void error (int fd, int err) {
     if (write (fd, &err, sizeof(err)) != sizeof(err)) {
@@ -134,6 +139,11 @@ void initChildStuff (int fdin, int fdout, ChildStuff *c) {
 }
 
 int main(int argc, char *argv[]) {
+    if (argc == 2 && strcmp(argv[1], "-version") == 0) {
+        fprintf(stdout, "%s\n", VERSION_NUMBER_FOUR_POSITIONS_PADDING);
+        exit (0);
+    }
+
     ChildStuff c;
     struct stat buf;
     /* argv[1] contains the fd number to read all the child info */
