@@ -677,6 +677,7 @@ Java_java_lang_ProcessImpl_forkAndExec(JNIEnv *env,
 
     if (strcmp(VERSION_NUMBER_FOUR_POSITIONS_PADDING, version_data) != 0) {
         throwIOException(env, errno, "Incorrect jspawnhelper version");
+        goto Catch;
     }
 
     if (envBlock != NULL) {
