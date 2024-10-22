@@ -2399,10 +2399,15 @@ bool MacroAssembler::try_merge_ldst(Register rt, const Address &adr, size_t size
   }
 }
 
-void MacroAssembler::ldr(Register Rx, const Address &adr) {
+void MacroAssembler::ldr(Register Rx, const Address &adr, Register tmp) {
   // We always try to merge two adjacent loads into one ldp.
   if (!try_merge_ldst(Rx, adr, 8, false)) {
-    Assembler::ldr(Rx, adr);
+    // For base plus offset verify that offset fits in the instruction
+    if (adr.getMode() == Address::base_plus_offset) {
+      Assembler::ldr(Rx, form_address(tmp, adr.base(), adr.offset(), 0));
+    } else {
+      Assembler::ldr(Rx, adr);
+    }
   }
 }
 
@@ -2413,10 +2418,15 @@ void MacroAssembler::ldrw(Register Rw, const Address &adr) {
   }
 }
 
-void MacroAssembler::str(Register Rx, const Address &adr) {
+void MacroAssembler::str(Register Rx, const Address &adr, Register tmp) {
   // We always try to merge two adjacent stores into one stp.
   if (!try_merge_ldst(Rx, adr, 8, true)) {
-    Assembler::str(Rx, adr);
+    // For base plus offset verify that offset fits in the instruction
+    if (adr.getMode() == Address::base_plus_offset) {
+      Assembler::str(Rx, form_address(tmp, adr.base(), adr.offset(), 0));
+    } else {
+      Assembler::str(Rx, adr);
+    }
   }
 }
 

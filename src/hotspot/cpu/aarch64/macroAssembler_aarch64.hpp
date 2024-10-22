@@ -160,9 +160,9 @@ class MacroAssembler: public Assembler {
   using Assembler::ldrw;
   using Assembler::strw;
 
-  void ldr(Register Rx, const Address &adr);
+  void ldr(Register Rx, const Address &adr, Register tmp=rscratch2);
   void ldrw(Register Rw, const Address &adr);
-  void str(Register Rx, const Address &adr);
+  void str(Register Rx, const Address &adr, Register tmp=rscratch2);
   void strw(Register Rx, const Address &adr);
 
   // Frame creation and destruction shared between JITs.
