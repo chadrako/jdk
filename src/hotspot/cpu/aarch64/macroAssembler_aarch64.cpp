@@ -2260,6 +2260,9 @@ Address MacroAssembler::form_address(Register Rd, Register base, int64_t byte_of
     // It fits; no need for any heroics
     return Address(base, byte_offset);
 
+  // Verify base won't be clobbered
+  assert_different_registers(Rd, base);
+
   // Don't do anything clever with negative or misaligned offsets
   unsigned mask = (1 << shift) - 1;
   if (byte_offset < 0 || byte_offset & mask) {
@@ -2402,7 +2405,12 @@ bool MacroAssembler::try_merge_ldst(Register rt, const Address &adr, size_t size
 void MacroAssembler::ldr(Register Rx, const Address &adr) {
   // We always try to merge two adjacent loads into one ldp.
   if (!try_merge_ldst(Rx, adr, 8, false)) {
-    Assembler::ldr(Rx, adr);
+    // For base plus offset verify that offset fits in the instruction
+    if (adr.getMode() == Address::base_plus_offset) {
+      Assembler::ldr(Rx, form_address(Rx, adr.base(), adr.offset(), 0));
+    } else {
+      Assembler::ldr(Rx, adr);
+    }
   }
 }
 
