@@ -193,6 +193,7 @@ class RegisterOrConstant {
   RegisterOrConstant(): _r(noreg), _c(0) {}
   RegisterOrConstant(Register r): _r(r), _c(0) {}
   RegisterOrConstant(intptr_t c): _r(noreg), _c(c) {}
+  RegisterOrConstant(ByteSize c): _r(noreg), _c(in_bytes(c)) {}
 
   Register as_register() const { assert(is_register(),""); return _r; }
   intptr_t as_constant() const { assert(is_constant(),""); return _c; }

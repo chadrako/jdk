@@ -1362,7 +1362,7 @@ void MacroAssembler::lookup_virtual_method(Register recv_klass,
     lea(method_result, Address(recv_klass,
                                vtable_index.as_register(),
                                Address::lsl(LogBytesPerWord)));
-    ldr(method_result, Address(method_result, vtable_offset_in_bytes));
+    ldr(method_result, Address(method_result, RegisterOrConstant(vtable_offset_in_bytes)));
   } else {
     vtable_offset_in_bytes += vtable_index.as_constant() * wordSize;
     ldr(method_result,
@@ -2391,7 +2391,7 @@ bool MacroAssembler::try_merge_ldst(Register rt, const Address &adr, size_t size
   } else {
     assert(size_in_bytes == 8 || size_in_bytes == 4, "only 8 bytes or 4 bytes load/store is supported.");
     const uint64_t mask = size_in_bytes - 1;
-    if (adr.getMode() == Address::base_plus_offset &&
+    if (adr.getMode() == Address::base_plus_offset && adr.getMode() == Address::base_plus_offset_safe &&
         (adr.offset() & mask) == 0) { // only supports base_plus_offset.
       code()->set_last_insn(pc());
     }
@@ -2399,10 +2399,22 @@ bool MacroAssembler::try_merge_ldst(Register rt, const Address &adr, size_t size
   }
 }
 
-void MacroAssembler::ldr(Register Rx, const Address &adr) {
+void MacroAssembler::ldr(Register Rx, const Address &adr, Register tmp) {
   // We always try to merge two adjacent loads into one ldp.
   if (!try_merge_ldst(Rx, adr, 8, false)) {
-    Assembler::ldr(Rx, adr);
+    // Check for chance of overflow
+    if (adr.getMode() == Address::base_plus_offset) {
+      if (adr.base() == Rx) {
+        // If dest and base are equal we may need tmp
+        assert(tmp != dummy_reg, "must be");
+      } else {
+        // Tmp can be dest
+        tmp = Rx;
+      }
+      Assembler::ldr(Rx, form_address(tmp, adr.base(), adr.offset(), 0));
+    } else {
+      Assembler::ldr(Rx, adr);
+    }
   }
 }
 
@@ -3616,7 +3628,7 @@ bool MacroAssembler::ldst_can_merge(Register rt,
     return false;
   }
 
-  if (adr.getMode() != Address::base_plus_offset || prev != last) {
+  if ((adr.getMode() != Address::base_plus_offset && adr.getMode() != Address::base_plus_offset_safe) || prev != last ) {
     return false;
   }
 
@@ -4803,6 +4815,7 @@ void MacroAssembler::addptr(const Address &dst, int32_t src) {
   Address adr;
   switch(dst.getMode()) {
   case Address::base_plus_offset:
+  case Address::base_plus_offset_safe:
     // This is the expected mode, although we allow all the other
     // forms below.
     adr = form_address(rscratch2, dst.base(), dst.offset(), LogBytesPerWord);
@@ -4820,7 +4833,8 @@ void MacroAssembler::addptr(const Address &dst, int32_t src) {
 void MacroAssembler::cmpptr(Register src1, Address src2) {
   uint64_t offset;
   adrp(rscratch1, src2, offset);
-  ldr(rscratch1, Address(rscratch1, offset));
+  // offset from adrp is guaranteed to fit in ldr offset
+  ldr(rscratch1, Address(rscratch1, RegisterOrConstant(offset)));
   cmp(src1, rscratch1);
 }
 
@@ -4830,13 +4844,13 @@ void MacroAssembler::cmpoop(Register obj1, Register obj2) {
 
 void MacroAssembler::load_method_holder_cld(Register rresult, Register rmethod) {
   load_method_holder(rresult, rmethod);
-  ldr(rresult, Address(rresult, InstanceKlass::class_loader_data_offset()));
+  ldr(rresult, Address(rresult, RegisterOrConstant(InstanceKlass::class_loader_data_offset())));
 }
 
 void MacroAssembler::load_method_holder(Register holder, Register method) {
-  ldr(holder, Address(method, Method::const_offset()));                      // ConstMethod*
-  ldr(holder, Address(holder, ConstMethod::constants_offset()));             // ConstantPool*
-  ldr(holder, Address(holder, ConstantPool::pool_holder_offset()));          // InstanceKlass*
+  ldr(holder, Address(method, RegisterOrConstant(Method::const_offset())));                      // ConstMethod*
+  ldr(holder, Address(holder, RegisterOrConstant(ConstMethod::constants_offset())));             // ConstantPool*
+  ldr(holder, Address(holder, RegisterOrConstant(ConstantPool::pool_holder_offset())));          // InstanceKlass*
 }
 
 void MacroAssembler::load_klass(Register dst, Register src) {
@@ -4888,10 +4902,10 @@ void MacroAssembler::resolve_weak_handle(Register result, Register tmp1, Registe
 
 void MacroAssembler::load_mirror(Register dst, Register method, Register tmp1, Register tmp2) {
   const int mirror_offset = in_bytes(Klass::java_mirror_offset());
-  ldr(dst, Address(rmethod, Method::const_offset()));
-  ldr(dst, Address(dst, ConstMethod::constants_offset()));
-  ldr(dst, Address(dst, ConstantPool::pool_holder_offset()));
-  ldr(dst, Address(dst, mirror_offset));
+  ldr(dst, Address(rmethod, RegisterOrConstant(Method::const_offset())));
+  ldr(dst, Address(dst, RegisterOrConstant(ConstMethod::constants_offset())));
+  ldr(dst, Address(dst, RegisterOrConstant(ConstantPool::pool_holder_offset())));
+  ldr(dst, Address(dst, RegisterOrConstant(mirror_offset)));
   resolve_oop_handle(dst, tmp1, tmp2);
 }
 
@@ -6394,7 +6408,7 @@ void MacroAssembler::get_thread(Register dst) {
 }
 
 void MacroAssembler::cache_wb(Address line) {
-  assert(line.getMode() == Address::base_plus_offset, "mode should be base_plus_offset");
+  assert(line.getMode() == Address::base_plus_offset || line.getMode() == Address::base_plus_offset_safe, "mode should be base_plus_offset");
   assert(line.index() == noreg, "index should be noreg");
   assert(line.offset() == 0, "offset should be 0");
   // would like to assert this

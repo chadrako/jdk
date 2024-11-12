@@ -117,22 +117,22 @@ class InterpreterMacroAssembler: public MacroAssembler {
 
   void get_const(Register reg) {
     get_method(reg);
-    ldr(reg, Address(reg, in_bytes(Method::const_offset())));
+    ldr(reg, Address(reg, RegisterOrConstant(Method::const_offset())));
   }
 
   void get_constant_pool(Register reg) {
     get_const(reg);
-    ldr(reg, Address(reg, in_bytes(ConstMethod::constants_offset())));
+    ldr(reg, Address(reg, RegisterOrConstant(ConstMethod::constants_offset())));
   }
 
   void get_constant_pool_cache(Register reg) {
     get_constant_pool(reg);
-    ldr(reg, Address(reg, ConstantPool::cache_offset()));
+    ldr(reg, Address(reg, RegisterOrConstant(ConstantPool::cache_offset())));
   }
 
   void get_cpool_and_tags(Register cpool, Register tags) {
     get_constant_pool(cpool);
-    ldr(tags, Address(cpool, ConstantPool::tags_offset()));
+    ldr(tags, Address(cpool, RegisterOrConstant(ConstantPool::tags_offset())));
   }
 
   void get_unsigned_2_byte_index_at_bcp(Register reg, int bcp_offset);

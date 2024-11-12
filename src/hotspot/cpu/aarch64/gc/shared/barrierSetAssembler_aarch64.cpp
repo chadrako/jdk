@@ -62,11 +62,11 @@ void BarrierSetAssembler::load_at(MacroAssembler* masm, DecoratorSet decorators,
           __ decode_heap_oop(dst);
         }
       } else {
-        __ ldr(dst, src);
+        __ ldr(dst, src, tmp1);
       }
     } else {
       assert(in_native, "why else?");
-      __ ldr(dst, src);
+      __ ldr(dst, src, tmp1);
     }
     break;
   }
@@ -76,7 +76,7 @@ void BarrierSetAssembler::load_at(MacroAssembler* masm, DecoratorSet decorators,
   case T_SHORT:   __ load_signed_short  (dst, src); break;
   case T_INT:     __ ldrw               (dst, src); break;
   case T_LONG:    __ ldr                (dst, src); break;
-  case T_ADDRESS: __ ldr                (dst, src); break;
+  case T_ADDRESS: __ ldr                (dst, src, tmp1); break;
   case T_FLOAT:   __ ldrs               (v0, src);  break;
   case T_DOUBLE:  __ ldrd               (v0, src);  break;
   default: Unimplemented();

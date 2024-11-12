@@ -745,7 +745,7 @@ void C2_MacroAssembler::string_indexof(Register str2, Register str1,
       add(tmp6, str1, cnt1, LSL, str1_chr_shift); // address after str1
       if (str1_isL == str2_isL) {
         // load last 8 bytes (8LL/4UU symbols)
-        ldr(tmp6, Address(tmp6, -wordSize));
+        ldr(tmp6, Address(tmp6, RegisterOrConstant(-wordSize)));
       } else {
         ldrw(tmp6, Address(tmp6, -wordSize/2)); // load last 4 bytes(4 symbols)
         // convert Latin1 to UTF. We'll have to wait until load completed, but
