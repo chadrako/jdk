@@ -120,12 +120,14 @@ class MacroAssembler: public Assembler {
   /* Sometimes we get misaligned loads and stores, usually from Unsafe
      accesses, and these can exceed the offset range. */
   Address legitimize_address(const Address &a, int size, Register scratch) {
-    if (a.getMode() == Address::base_plus_offset) {
+    if (a.getMode() == Address::base_plus_offset_safe || a.getMode() == Address::base_plus_offset_unsafe) {
       if (! Address::offset_ok_for_immed(a.offset(), exact_log2(size))) {
         block_comment("legitimize_address {");
         lea(scratch, a);
         block_comment("} legitimize_address");
         return Address(scratch);
+      } else {
+        return Address(a.base(), RegisterOrConstant(a.offset()));
       }
     }
     return a;
@@ -160,7 +162,7 @@ class MacroAssembler: public Assembler {
   using Assembler::ldrw;
   using Assembler::strw;
 
-  void ldr(Register Rx, const Address &adr);
+  void ldr(Register Rx, const Address &adr, Register tmp=dummy_reg);
   void ldrw(Register Rw, const Address &adr);
   void str(Register Rx, const Address &adr);
   void strw(Register Rx, const Address &adr);

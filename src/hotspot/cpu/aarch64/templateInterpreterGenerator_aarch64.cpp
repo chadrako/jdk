@@ -863,9 +863,9 @@ void TemplateInterpreterGenerator::generate_fixed_frame(bool native_call) {
   __ stp(rfp, lr, Address(sp, 10 * wordSize));
   __ lea(rfp, Address(sp, 10 * wordSize));
 
-  __ ldr(rcpool, Address(rmethod, Method::const_offset()));
-  __ ldr(rcpool, Address(rcpool, ConstMethod::constants_offset()));
-  __ ldr(rcpool, Address(rcpool, ConstantPool::cache_offset()));
+  __ ldr(rcpool, Address(rmethod, RegisterOrConstant(Method::const_offset())));
+  __ ldr(rcpool, Address(rcpool, RegisterOrConstant(ConstMethod::constants_offset())));
+  __ ldr(rcpool, Address(rcpool, RegisterOrConstant(ConstantPool::cache_offset())));
   __ sub(rscratch1, rlocals, rfp);
   __ lsr(rscratch1, rscratch1, Interpreter::logStackElementSize);   // rscratch1 = rlocals - fp();
   // Store relativized rlocals, see frame::interpreter_frame_locals().
@@ -1840,7 +1840,7 @@ void TemplateInterpreterGenerator::generate_throw_exception() {
     // Compute size of arguments for saving when returning to
     // deoptimized caller
     __ get_method(r0);
-    __ ldr(r0, Address(r0, Method::const_offset()));
+    __ ldr(r0, Address(r0, RegisterOrConstant(Method::const_offset())));
     __ load_unsigned_short(r0, Address(r0, in_bytes(ConstMethod::
                                                     size_of_parameters_offset())));
     __ lsl(r0, r0, Interpreter::logStackElementSize);
