@@ -217,7 +217,7 @@ Address LIR_Assembler::as_Address_lo(LIR_Address* addr) {
 Address LIR_Assembler::stack_slot_address(int index, uint size, Register tmp, int adjust) {
   precond(size == 4 || size == 8);
   Address addr = frame_map()->address_for_slot(index, adjust);
-  precond(addr.getMode() == Address::base_plus_offset);
+  precond(addr.getMode() == Address::base_plus_offset || addr.getMode() == Address::base_plus_offset_safe);
   precond(addr.base() == sp);
   precond(addr.offset() > 0);
   uint mask = size - 1;
@@ -1441,7 +1441,7 @@ void LIR_Assembler::emit_opTypeCheck(LIR_OpTypeCheck* op) {
     __ load_klass(klass_RInfo, value);
 
     // get instance klass (it's already uncompressed)
-    __ ldr(k_RInfo, Address(k_RInfo, ObjArrayKlass::element_klass_offset()));
+    __ ldr(k_RInfo, Address(k_RInfo, ObjArrayKlass::element_klass_offset(), true));
     // perform the fast part of the checking logic
     __ check_klass_subtype_fast_path(klass_RInfo, k_RInfo, Rtmp1, success_target, failure_target, nullptr);
     // call out-of-line instance of __ check_klass_subtype_slow_path(...):
@@ -2385,7 +2385,7 @@ void LIR_Assembler::emit_arraycopy(LIR_OpArrayCopy* op) {
         assert_different_registers(c_rarg2, dst);
 
         __ load_klass(c_rarg4, dst);
-        __ ldr(c_rarg4, Address(c_rarg4, ObjArrayKlass::element_klass_offset()));
+        __ ldr(c_rarg4, Address(c_rarg4, ObjArrayKlass::element_klass_offset(), true));
         __ ldrw(c_rarg3, Address(c_rarg4, Klass::super_check_offset_offset()));
         __ far_call(RuntimeAddress(copyfunc_addr));
 

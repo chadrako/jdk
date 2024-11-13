@@ -126,6 +126,9 @@ class MacroAssembler: public Assembler {
         lea(scratch, a);
         block_comment("} legitimize_address");
         return Address(scratch);
+      } else {
+        // Return base_plus_offset_safe address
+        return Address(a.base(), a.offset(), true);
       }
     }
     return a;
@@ -160,7 +163,7 @@ class MacroAssembler: public Assembler {
   using Assembler::ldrw;
   using Assembler::strw;
 
-  void ldr(Register Rx, const Address &adr);
+  void ldr(Register Rx, const Address &adr, Register tmp=dummy_reg);
   void ldrw(Register Rw, const Address &adr);
   void str(Register Rx, const Address &adr);
   void strw(Register Rx, const Address &adr);

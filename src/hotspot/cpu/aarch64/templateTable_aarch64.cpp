@@ -463,7 +463,7 @@ void TemplateTable::ldc2_w()
 
   // ltos
   __ lea(r0, Address(r1, r0, Address::lsl(3)));
-  __ ldr(r0, Address(r0, base_offset));
+  __ ldr(r0, Address(r0, base_offset, true));
   __ push_l();
   __ b(Done);
 
@@ -1128,7 +1128,7 @@ void TemplateTable::aastore() {
   // Move superklass into r0
   __ load_klass(r0, r3);
   __ ldr(r0, Address(r0,
-                     ObjArrayKlass::element_klass_offset()));
+                     ObjArrayKlass::element_klass_offset(), true));
   // Compress array + index*oopSize + 12 into a single register.  Frees r2.
 
   // Generate subtype check.  Blows r2, r5
@@ -2362,9 +2362,9 @@ void TemplateTable::load_resolved_field_entry(Register obj,
 
   // Klass overwrite register
   if (is_static) {
-    __ ldr(obj, Address(cache, ResolvedFieldEntry::field_holder_offset()));
+    __ ldr(obj, Address(cache, ResolvedFieldEntry::field_holder_offset(), true));
     const int mirror_offset = in_bytes(Klass::java_mirror_offset());
-    __ ldr(obj, Address(obj, mirror_offset));
+    __ ldr(obj, Address(obj, mirror_offset, true));
     __ resolve_oop_handle(obj, r5, rscratch2);
   }
 }
