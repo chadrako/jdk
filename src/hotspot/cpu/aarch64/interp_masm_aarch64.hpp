@@ -117,12 +117,12 @@ class InterpreterMacroAssembler: public MacroAssembler {
 
   void get_const(Register reg) {
     get_method(reg);
-    ldr(reg, Address(reg, in_bytes(Method::const_offset())));
+    ldr(reg, Address(reg, create_imm_offset(Method, const_offset)));
   }
 
   void get_constant_pool(Register reg) {
     get_const(reg);
-    ldr(reg, Address(reg, in_bytes(ConstMethod::constants_offset())));
+    ldr(reg, Address(reg, create_imm_offset(ConstMethod, constants_offset)));
   }
 
   void get_constant_pool_cache(Register reg) {

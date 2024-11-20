@@ -124,7 +124,8 @@ extern "C" {
 
 void Address::lea(MacroAssembler *as, Register r) const {
   switch(_mode) {
-  case base_plus_offset: {
+  case base_plus_offset_safe:
+  case base_plus_offset_unsafe: {
     if (offset() == 0 && base() == r) // it's a nop
       break;
     if (offset() > 0)
@@ -197,8 +198,9 @@ void Assembler::prfm(const Address &adr, prfop pfop) {
     int64_t offset = (adr.target() - pc()) >> 2;
     sf(offset, 23, 5);
   } else {
-    assert((mode == Address::base_plus_offset)
-            || (mode == Address::base_plus_offset_reg), "must be base_plus_offset/base_plus_offset_reg");
+    assert((mode == Address::base_plus_offset_safe)
+            || (mode == Address::base_plus_offset_unsafe)
+            || (mode == Address::base_plus_offset_reg), "must be base_plus_offset_safe/base_plus_offset_unsafe/base_plus_offset_reg");
     ld_st2(as_Register(pfop), adr, 0b11, 0b10);
   }
 }

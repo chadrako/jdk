@@ -51,7 +51,7 @@ void MethodHandles::load_klass_from_Class(MacroAssembler* _masm, Register klass_
   if (VerifyMethodHandles)
     verify_klass(_masm, klass_reg, VM_CLASS_ID(java_lang_Class),
                  "MH argument is a Class");
-  __ ldr(klass_reg, Address(klass_reg, java_lang_Class::klass_offset()));
+  __ ldr(klass_reg, Address(klass_reg, create_imm_offset(java_lang_Class, klass_offset)));
 }
 
 #ifdef ASSERT
@@ -81,7 +81,7 @@ void MethodHandles::verify_klass(MacroAssembler* _masm,
   __ cmpptr(temp, ExternalAddress((address) klass_addr));
   __ br(Assembler::EQ, L_ok);
   intptr_t super_check_offset = klass->super_check_offset();
-  __ ldr(temp, Address(temp, super_check_offset));
+  __ ldr(temp, Address(temp, super_check_offset), temp2);
   __ cmpptr(temp, ExternalAddress((address) klass_addr));
   __ br(Assembler::EQ, L_ok);
   __ pop(RegSet::of(temp, temp2), sp);
@@ -153,7 +153,7 @@ void MethodHandles::jump_to_lambda_form(MacroAssembler* _masm,
                         sizeof(u2), /*is_signed*/ false);
     // assert(sizeof(u2) == sizeof(Method::_size_of_parameters), "");
     Label L;
-    __ ldr(rscratch1, __ argument_address(temp2, -1));
+    __ ldr(rscratch1, __ argument_address(temp2, -1), rscratch2);
     __ cmpoop(recv, rscratch1);
     __ br(Assembler::EQ, L);
     __ ldr(r0, __ argument_address(temp2, -1));

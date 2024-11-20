@@ -52,7 +52,7 @@ void InterpreterMacroAssembler::narrow(Register result) {
 
   // Get method->_constMethod->_result_type
   ldr(rscratch1, Address(rfp, frame::interpreter_frame_method_offset * wordSize));
-  ldr(rscratch1, Address(rscratch1, Method::const_offset()));
+  ldr(rscratch1, Address(rscratch1, create_imm_offset(Method, const_offset)));
   ldrb(rscratch1, Address(rscratch1, ConstMethod::result_type_offset()));
 
   Label done, notBool, notByte, notChar;
@@ -216,8 +216,8 @@ void InterpreterMacroAssembler::load_resolved_reference_at_index(
 
   get_constant_pool(result);
   // load pointer for resolved_references[] objArray
-  ldr(result, Address(result, ConstantPool::cache_offset()));
-  ldr(result, Address(result, ConstantPoolCache::resolved_references_offset()));
+  ldr(result, Address(result, create_imm_offset(ConstantPool, cache_offset)));
+  ldr(result, Address(result, create_imm_offset(ConstantPoolCache, resolved_references_offset)));
   resolve_oop_handle(result, tmp, rscratch2);
   // Add in the index
   add(index, index, arrayOopDesc::base_offset_in_bytes(T_OBJECT) >> LogBytesPerHeapOop);
@@ -228,9 +228,9 @@ void InterpreterMacroAssembler::load_resolved_klass_at_offset(
                              Register cpool, Register index, Register klass, Register temp) {
   add(temp, cpool, index, LSL, LogBytesPerWord);
   ldrh(temp, Address(temp, sizeof(ConstantPool))); // temp = resolved_klass_index
-  ldr(klass, Address(cpool,  ConstantPool::resolved_klasses_offset())); // klass = cpool->_resolved_klasses
+  ldr(klass, Address(cpool,  create_imm_offset(ConstantPool, resolved_klasses_offset))); // klass = cpool->_resolved_klasses
   add(klass, klass, temp, LSL, LogBytesPerWord);
-  ldr(klass, Address(klass, Array<Klass*>::base_offset_in_bytes()));
+  ldr(klass, Address(klass, create_imm_offset(Array<Klass*>, base_offset_in_bytes)));
 }
 
 // Generate a subtype check: branch to ok_is_subtype if sub_klass is a

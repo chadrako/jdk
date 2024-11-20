@@ -2355,8 +2355,7 @@ class StubGenerator: public StubCodeGenerator {
       generate_type_check(scratch_src_klass, sco_temp, dst_klass, L_plain_copy);
 
       // Fetch destination element klass from the ObjArrayKlass header.
-      int ek_offset = in_bytes(ObjArrayKlass::element_klass_offset());
-      __ ldr(dst_klass, Address(dst_klass, ek_offset));
+      __ ldr(dst_klass, Address(dst_klass, create_imm_offset(ObjArrayKlass, element_klass_offset)));
       __ ldrw(sco_temp, Address(dst_klass, sco_offset));
 
       // the checkcast_copy loop needs two extra arguments:

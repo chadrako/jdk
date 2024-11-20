@@ -342,8 +342,8 @@ namespace ext
 class Address {
  public:
 
-  enum mode { no_mode, base_plus_offset, pre, post, post_reg,
-              base_plus_offset_reg, literal };
+  enum mode { no_mode, base_plus_offset_safe, base_plus_offset_unsafe,
+              pre, post, post_reg, base_plus_offset_reg, literal };
 
   // Shift and extend for base reg + reg offset addressing
   class extend {
@@ -417,13 +417,13 @@ class Address {
   {}
 
   Address(Register r) :
-    _mode(base_plus_offset),
+    _mode(base_plus_offset_safe),
     _nonliteral(r, noreg, 0)
   {}
 
   template<typename T, ENABLE_IF(std::is_integral<T>::value)>
   Address(Register r, T o) :
-    _mode(base_plus_offset),
+    _mode(base_plus_offset_unsafe),
     _nonliteral(r, noreg, o)
   {}
 
@@ -456,12 +456,12 @@ class Address {
       _mode = base_plus_offset_reg;
       new (&_nonliteral) Nonliteral(base, index.as_register(), 0, ext);
     } else {
-      guarantee(ext.option() == ext::uxtx, "should be");
       assert(index.is_constant(), "should be");
-      _mode = base_plus_offset;
+      _mode = base_plus_offset_safe;
       new (&_nonliteral) Nonliteral(base,
                                     noreg,
-                                    index.as_constant() << ext.shift());
+                                    index.as_constant(),
+                                    ext);
     }
   }
 
@@ -510,7 +510,8 @@ class Address {
     case literal:
     case no_mode:
       return false;
-    case base_plus_offset:
+    case base_plus_offset_safe:
+    case base_plus_offset_unsafe:
     case base_plus_offset_reg:
     case pre:
     case post:
@@ -537,7 +538,8 @@ class Address {
     i->srf(base(), 5);
 
     switch(_mode) {
-    case base_plus_offset:
+    case base_plus_offset_safe:
+    case base_plus_offset_unsafe:
       {
         unsigned size = i->get(31, 30);
         if (i->get(26, 26) && i->get(23, 23)) {
@@ -600,7 +602,8 @@ class Address {
 
   void encode_pair(Instruction_aarch64 *i) const {
     switch(_mode) {
-    case base_plus_offset:
+    case base_plus_offset_safe:
+    case base_plus_offset_unsafe:
       i->f(0b010, 25, 23);
       break;
     case pre:
@@ -638,7 +641,7 @@ class Address {
   }
 
   void encode_nontemporal_pair(Instruction_aarch64 *i) const {
-    guarantee(_mode == base_plus_offset, "Bad addressing mode for nontemporal op");
+    guarantee(_mode == base_plus_offset_safe || _mode == base_plus_offset_unsafe, "Bad addressing mode for nontemporal op");
     i->f(0b000, 25, 23);
     unsigned size = i->get(31, 31);
     size = 4 << size;
@@ -650,6 +653,9 @@ class Address {
   void lea(MacroAssembler *, Register) const;
 
   static bool offset_ok_for_immed(int64_t offset, uint shift);
+
+  template <int64_t offset, uint shift>
+  static constexpr bool offset_ok_for_immed_compile();
 
   static bool offset_ok_for_sve_immed(int64_t offset, int shift, int vl /* sve vector length */) {
     if (offset % vl == 0) {
@@ -663,6 +669,14 @@ class Address {
     }
     return false;
   }
+
+  #define create_imm_offset(klass, field_offset_func) \
+  ([]() { \
+    constexpr size_t max_possible_offset = sizeof(klass); \
+    static_assert(Address::offset_ok_for_immed_compile<max_possible_offset, 0>()); \
+    return RegisterOrConstant(klass::field_offset_func()); \
+  }())
+
 };
 
 // Convenience classes
@@ -2379,7 +2393,8 @@ public:
 
   void ld_st(FloatRegister Vt, SIMD_Arrangement T, Address a, int op1, int op2, int regs) {
     switch (a.getMode()) {
-    case Address::base_plus_offset:
+    case Address::base_plus_offset_safe:
+    case Address::base_plus_offset_unsafe:
       guarantee(a.offset() == 0, "no offset allowed here");
       ld_st(Vt, T, a.base(), op1, op2);
       break;
@@ -2405,7 +2420,8 @@ public:
     int Rm;
 
     switch (a.getMode()) {
-    case Address::base_plus_offset:
+    case Address::base_plus_offset_safe:
+    case Address::base_plus_offset_unsafe:
       guarantee(a.offset() == 0, "no offset allowed here");
       Rm = 0;
       break;
@@ -3494,7 +3510,8 @@ private:
               SIMD_RegVariant T, const Address &a,
               int op1, int type, int imm_op2, int scalar_op2) {
     switch (a.getMode()) {
-    case Address::base_plus_offset:
+    case Address::base_plus_offset_safe:
+    case Address::base_plus_offset_unsafe:
       sve_ld_st1(Zt, a.base(), checked_cast<int>(a.offset()), Pg, T, op1, type, imm_op2);
       break;
     case Address::base_plus_offset_reg:

@@ -113,7 +113,7 @@ instruct zLoadP(iRegPNoSp dst, memory8 mem, rFlagsReg cr)
 
   ins_encode %{
     Address ref_addr = mem2address($mem->opcode(), as_Register($mem$$base), $mem$$index, $mem$$scale, $mem$$disp);
-    if (ref_addr.getMode() == Address::base_plus_offset) {
+    if (ref_addr.getMode() == Address::base_plus_offset_unsafe) {
       // Fix up any out-of-range offsets.
       assert_different_registers(rscratch2, as_Register($mem$$base));
       assert_different_registers(rscratch2, $dst$$Register);

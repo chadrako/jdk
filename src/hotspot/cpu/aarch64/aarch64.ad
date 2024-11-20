@@ -2716,7 +2716,7 @@ typedef void (MacroAssembler::* mem_vector_insn)(FloatRegister Rt,
                         int size_in_memory)
   {
     Address addr = mem2address(opcode, base, index, scale, disp);
-    if (addr.getMode() == Address::base_plus_offset) {
+    if (addr.getMode() == Address::base_plus_offset_unsafe) {
       /* Fix up any out-of-range offsets. */
       assert_different_registers(rscratch1, base);
       assert_different_registers(rscratch1, reg);
