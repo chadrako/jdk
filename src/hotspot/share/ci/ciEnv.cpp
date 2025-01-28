@@ -1073,6 +1073,17 @@ void ciEnv::register_method(ciMethod* target,
     code_buffer->free_blob();
 
     if (nm != nullptr) {
+      if (UseNewCode) {
+        // Copy nmethod for testing
+        nmethod* nm_copy = nmethod::new_nmethod(nm);
+        nm->make_not_used();
+        nm = nm_copy;
+
+        ResourceMark rm;
+        char *method_name = method->name_and_sig_as_C_string();
+        tty->print_cr("Copied method %s", method_name);
+      }
+
       nm->set_has_unsafe_access(has_unsafe_access);
       nm->set_has_wide_vectors(has_wide_vectors);
       nm->set_has_monitors(has_monitors);
