@@ -1624,6 +1624,21 @@ WB_ENTRY(jobjectArray, WB_GetNMethod(JNIEnv* env, jobject o, jobject method, jbo
   return result;
 WB_END
 
+WB_ENTRY(void, WB_ReplaceNMethod(JNIEnv* env, jobject o, jobject method, jboolean is_osr))
+  ResourceMark rm(THREAD);
+  jmethodID jmid = reflected_method_to_jmid(thread, env, method);
+  CHECK_JNI_EXCEPTION(env);
+  methodHandle mh(THREAD, Method::checked_resolve_jmethod_id(jmid));
+  nmethod* code = is_osr ? mh->lookup_osr_nmethod_for(InvocationEntryBci, CompLevel_none, false) : mh->code();
+  if (code == nullptr) {
+    return;
+  }
+
+  code->make_not_used();
+
+  nmethod* code_copy = nmethod::new_nmethod(code);
+WB_END
+
 CodeBlob* WhiteBox::allocate_code_blob(int size, CodeBlobType blob_type) {
   guarantee(WhiteBoxAPI, "internal testing API :: WhiteBox has to be enabled");
   BufferBlob* blob;
@@ -2871,6 +2886,8 @@ static JNINativeMethod methods[] = {
   {CC"getCPUFeatures",     CC"()Ljava/lang/String;",  (void*)&WB_GetCPUFeatures     },
   {CC"getNMethod0",         CC"(Ljava/lang/reflect/Executable;Z)[Ljava/lang/Object;",
                                                       (void*)&WB_GetNMethod         },
+  {CC"replaceNMethod0",         CC"(Ljava/lang/reflect/Executable;Z)V",
+                                                      (void*)&WB_ReplaceNMethod         },
   {CC"allocateCodeBlob",   CC"(II)J",                 (void*)&WB_AllocateCodeBlob   },
   {CC"freeCodeBlob",       CC"(J)V",                  (void*)&WB_FreeCodeBlob       },
   {CC"getCodeHeapEntries", CC"(I)[Ljava/lang/Object;",(void*)&WB_GetCodeHeapEntries },
