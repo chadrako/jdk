@@ -1417,6 +1417,7 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
     _immutable_data = data_end();
   }
 
+  // TODO This could get cleared when old nmethod gets purged
   _exception_cache            = nm._exception_cache;
 
   _gc_data                    = nullptr;
@@ -1425,6 +1426,7 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
 
   _oops_do_mark_link          = nm._oops_do_mark_link;
 
+  // TODO This could get cleared when old nmethod gets purged
   _compiled_ic_data           = nm._compiled_ic_data;
 
   _osr_entry_point            = code_begin() + (nm._osr_entry_point - nm.code_begin());
@@ -1456,7 +1458,11 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
   _scopes_pcs_offset          = nm._scopes_pcs_offset;
   _scopes_data_offset         = nm._scopes_data_offset;
 
-  _pc_desc_container          = new PcDescContainer(scopes_pcs_begin());
+  if (nm._pc_desc_container == nullptr) {
+    _pc_desc_container        = nullptr;
+  } else {
+    _pc_desc_container        = new PcDescContainer(scopes_pcs_begin());
+  }
 
 #if INCLUDE_JVMCI
   _speculations_offset        = nm._speculations_offset;
@@ -1505,14 +1511,19 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
   MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
   _method                     = nm._method;
   nm._method                  = nullptr;
-  if (_method != nullptr && _method->code() != nullptr) {
-    methodHandle mh(Thread::current(), _method);
-    _method->set_code(mh, this);
+  if (_method != nullptr) {
+    if (_method->code() == &nm) {
+      methodHandle mh(Thread::current(), _method);
+      _method->clear_entry_points();
+      _method->set_code(mh, this);
+    } else {
+      // TODO What to do in case where code is some other nmethod
+    }
   }
 }
 
 nmethod* nmethod::replace_nmethod(nmethod* nm, int comp_level_override) {
-  if (nm == nullptr) {
+  if (nm == nullptr || nm->has_been_deoptimized()) {
     return nullptr;
   }
 
