@@ -33,7 +33,8 @@
  *
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
- * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -Xbatch compiler.whitebox.ReplaceAllNMethods
+ * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -Xbatch
+ * compiler.whitebox.ReplaceAllNMethods
  */
 
 package compiler.whitebox;
@@ -45,38 +46,6 @@ public class ReplaceAllNMethods {
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
 
     public static void main(String [] args) throws Exception {
-        sumOfPrimes(50000);
-
-        WHITE_BOX.lockCompilation();
-
         WHITE_BOX.replaceAllNMethods();
-
-        WHITE_BOX.fullGC();
-
-        WHITE_BOX.unlockCompilation();
-
-        sumOfPrimes(50000);
-    }
-
-    private static void doWork() {
-
-    }
-
-    private static int sumOfPrimes(int limit) {
-        int sum = 0;
-        for (int i = 2; i <= limit; i++) {
-            if (isPrime(i)) {
-                sum += i;
-            }
-        }
-        return sum;
-    }
-
-    private static boolean isPrime(int num) {
-        if (num < 2) return false;
-        for (int i = 2; i <= Math.sqrt(num); i++) {
-            if (num % i == 0) return false;
-        }
-        return true;
     }
 }

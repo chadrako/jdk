@@ -366,10 +366,10 @@ class Method : public Metadata {
 
   void clear_entry_points();
 
-private:
   // Either called with NMethodState_lock held or from constructor.
   void clear_code();
 
+private:
   void clear_method_data() {
     _method_data = nullptr;
   }

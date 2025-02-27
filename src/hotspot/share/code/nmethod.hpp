@@ -335,6 +335,9 @@ class nmethod : public CodeBlob {
 
   nmethod(nmethod& nm);
 
+  // Create nmethod in a specific code heap
+  void* operator new(size_t size, int nmethod_size, CodeBlobType code_blob_type) throw();
+
   // helper methods
   void* operator new(size_t size, int nmethod_size, int comp_level) throw();
 
@@ -493,7 +496,12 @@ public:
 #endif
   );
 
-  static nmethod* replace_nmethod(nmethod* nm, int comp_level_override=-1);
+
+  // Relocate the nmethod to the code heap identified by code_blob_type.
+  // Returns nullptr if the code heap does not have enough space, otherwise
+  // the relocated nmethod. The original nmethod will be invalidated.
+  // If nm is already in the needed code heap, it is not relocated and the function returns it.
+  static nmethod* relocate_to(nmethod* nm, CodeBlobType code_blob_type);
 
   static nmethod* new_native_nmethod(const methodHandle& method,
                                      int compile_id,

@@ -1417,8 +1417,7 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
     _immutable_data = data_end();
   }
 
-  // TODO This could get cleared when old nmethod gets purged
-  _exception_cache            = nm._exception_cache;
+  _exception_cache            = nullptr;
 
   _gc_data                    = nullptr;
 
@@ -1426,8 +1425,7 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
 
   _oops_do_mark_link          = nm._oops_do_mark_link;
 
-  // TODO This could get cleared when old nmethod gets purged
-  _compiled_ic_data           = nm._compiled_ic_data;
+  _compiled_ic_data           = nullptr;
 
   _osr_entry_point            = code_begin() + (nm._osr_entry_point - nm.code_begin());
   _entry_offset               = nm._entry_offset;
@@ -1512,31 +1510,25 @@ nmethod::nmethod(nmethod& nm) : CodeBlob(nm.name(), CodeBlobKind::Nmethod, nm.si
   _method                     = nm._method;
   nm._method                  = nullptr;
   if (_method != nullptr) {
-    if (_method->code() == &nm) {
-      methodHandle mh(Thread::current(), _method);
-      _method->clear_entry_points();
-      _method->set_code(mh, this);
-    } else {
-      // TODO What to do in case where code is some other nmethod
-    }
+    methodHandle mh(Thread::current(), _method);
+    _method->clear_code();
+    _method->clear_entry_points();
+    _method->set_code(mh, this);
   }
 }
 
-nmethod* nmethod::replace_nmethod(nmethod* nm, int comp_level_override) {
-  if (nm == nullptr || nm->has_been_deoptimized()) {
+nmethod* nmethod::relocate_to(nmethod* nm, CodeBlobType code_blob_type) {
+  if (nm == nullptr || nm->is_marked_for_deoptimization()) {
     return nullptr;
   }
+
+  // TODO Add check for already in correct heap
 
   nmethod* nm_copy = nullptr;
 
   {
     MutexLocker mu(CodeCache_lock, Mutex::_no_safepoint_check_flag);
-
-    if (comp_level_override != -1) {
-      nm_copy = new (nm->size(), comp_level_override) nmethod(*nm);
-    } else {
-      nm_copy = new (nm->size(), nm->comp_level()) nmethod(*nm);
-    }
+    nm_copy = new (nm->size(), code_blob_type) nmethod(*nm);
 
     if (nm_copy != nullptr) {
       // To make dependency checking during class loading fast, record
@@ -1571,12 +1563,16 @@ nmethod* nmethod::replace_nmethod(nmethod* nm, int comp_level_override) {
     nm_copy->log_new_nmethod();
   }
 
+  if (!nm->is_unlinked()) {
+    nm->set_is_unlinked();
+  }
   nm->make_not_used();
-  nm->make_deoptimized();
-  nm->flush_dependencies();
-  nm->set_is_unlinked();
 
   return nm_copy;
+}
+
+void* nmethod::operator new(size_t size, int nmethod_size, CodeBlobType code_blob_type) throw () {
+  return CodeCache::allocate(nmethod_size, code_blob_type);
 }
 
 void* nmethod::operator new(size_t size, int nmethod_size, int comp_level) throw () {

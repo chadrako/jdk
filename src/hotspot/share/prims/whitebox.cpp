@@ -1635,7 +1635,7 @@ WB_ENTRY(void, WB_ReplaceNMethod(JNIEnv* env, jobject o, jobject method, jboolea
     return;
   }
 
-  nmethod* code_copy = nmethod::replace_nmethod(code, comp_level_override);
+  nmethod::relocate_to(code, CodeCache::get_code_heap_containing(code)->code_blob_type());
 WB_END
 
 WB_ENTRY(void, WB_ReplaceAllNMethods(JNIEnv* env))
@@ -1656,16 +1656,17 @@ WB_ENTRY(void, WB_ReplaceAllNMethods(JNIEnv* env))
     for (CodeBlob* cb = (CodeBlob*) heap->first(); cb != nullptr; cb = (CodeBlob*) heap->next(cb)) {
       if (cb->is_nmethod()) {
         nmethod* nm = cb->as_nmethod();
-        if (!nm->method()->is_continuation_native_intrinsic())
-          nmethods.append(nm);
+          // TODO Error after relocating MethodHandle functions
+          if (strstr(nm->method()->external_name(), "MethodHandle") == nullptr) {
+            nmethods.append(nm);
+          }
       }
     }
   }
 
   // Replace all
-  for (GrowableArrayIterator<nmethod*> it = nmethods.begin();
-       it != nmethods.end(); ++it) {
-    nmethod::replace_nmethod(*it);
+  for (GrowableArrayIterator<nmethod*> it = nmethods.begin(); it != nmethods.end(); ++it) {
+    nmethod::relocate_to(*it, CodeCache::get_code_heap_containing(*it)->code_blob_type());
   }
 
 WB_END
