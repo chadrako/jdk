@@ -1137,7 +1137,7 @@ void ciEnv::register_method(ciMethod* target,
   if (StressNMethodRelocation) {
     VM_RelocateNMethod relocate(nm, CodeBlobType::MethodNonProfiled);
     VMThread::execute(&relocate);
-    nm = relocate.getRelocatedNMethod();
+    relocate.getRelocatedNMethod();
   }
 }
 
