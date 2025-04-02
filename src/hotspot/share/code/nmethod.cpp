@@ -1394,7 +1394,7 @@ nmethod::nmethod(
   }
 }
 
-nmethod* nmethod::clone(CodeBlobType code_blob_type) {
+nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   assert(SafepointSynchronize::is_at_safepoint(), "only called at safepoint");
 
   // Allocate memory in code heap and copy data from nmethod
@@ -1445,16 +1445,9 @@ nmethod* nmethod::clone(CodeBlobType code_blob_type) {
     iter.reloc()->fix_relocation_after_move(&src, &dst);
   }
 
-  ICache::invalidate_range(nm_copy->code_begin(), nm_copy->code_size());
-
   nm_copy->clear_inline_caches();
 
-  // Update corresponding Java method to point to this nmethod
-  if (nm_copy->method()->code() == this) {
-    MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
-    methodHandle mh(Thread::current(), nm_copy->method());
-    nm_copy->method()->set_code(mh, nm_copy);
-  }
+  nm_copy->post_init();
 
   // To make dependency checking during class loading fast, record
   // the nmethod dependencies in the classes it is dependent on.
@@ -1479,20 +1472,15 @@ nmethod* nmethod::clone(CodeBlobType code_blob_type) {
     }
   }
 
-  nm_copy->post_init();
+  // Update corresponding Java method to point to this nmethod
+  if (nm_copy->method()->code() == this) {
+    MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
+    methodHandle mh(Thread::current(), nm_copy->method());
+    nm_copy->method()->set_code(mh, nm_copy);
+  }
 
   make_not_used();
 
-  return nm_copy;
-}
-
-nmethod* nmethod::relocate_to(nmethod* nm, CodeBlobType code_blob_type) {
-  // Relocate nmethod at safepoint
-  VM_RelocateNMethod relocate_nmethod(nm, code_blob_type);
-  VMThread::execute(&relocate_nmethod);
-  nmethod* nm_copy = relocate_nmethod.getRelocatedNMethod();
-
-  // Do verification and logging outside safepoint
   if (nm_copy != nullptr) {
     NOT_PRODUCT(note_java_nmethod(nm_copy));
     DEBUG_ONLY(nm_copy->verify();)
@@ -1502,8 +1490,16 @@ nmethod* nmethod::relocate_to(nmethod* nm, CodeBlobType code_blob_type) {
   return nm_copy;
 }
 
-bool nmethod::is_relocatable() const {
+bool nmethod::is_relocatable() {
   if (is_not_entrant()) {
+    return false;
+  }
+
+  if (is_marked_for_deoptimization()) {
+    return false;
+  }
+
+  if (is_unloading()) {
     return false;
   }
 

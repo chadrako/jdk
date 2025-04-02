@@ -492,12 +492,10 @@ public:
 #endif
   );
 
-  nmethod* clone(CodeBlobType code_blob_type);
-
   // Relocate the nmethod to the code heap identified by code_blob_type.
   // Returns nullptr if the code heap does not have enough space, otherwise
   // the relocated nmethod. The original nmethod will be invalidated.
-  static nmethod* relocate_to(nmethod* nm, CodeBlobType code_blob_type);
+  nmethod* relocate(CodeBlobType code_blob_type);
 
   static nmethod* new_native_nmethod(const methodHandle& method,
                                      int compile_id,
@@ -515,7 +513,7 @@ public:
   bool is_java_method  () const { return _method != nullptr && !_method->is_native(); }
   bool is_osr_method   () const { return _entry_bci != InvocationEntryBci; }
 
-  bool is_relocatable() const;
+  bool is_relocatable();
 
   // Compiler task identification.  Note that all OSR methods
   // are numbered in an independent sequence if CICountOSR is true,
@@ -889,8 +887,8 @@ public:
   bool  load_reported() const                     { return _load_reported; }
   void  set_load_reported()                       { _load_reported = true; }
 
-  inline int  get_immutable_data_references()           { return *immutable_data_references_begin();    }
-  inline void set_immutable_data_references(int count)  { (*immutable_data_references_begin()) = count; }
+  inline int  get_immutable_data_references()           { return *((int*)immutable_data_references_begin());  }
+  inline void set_immutable_data_references(int count)  { *((int*)immutable_data_references_begin()) = count; }
 
  public:
   // ScopeDesc retrieval operation
