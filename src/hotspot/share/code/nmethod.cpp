@@ -1399,6 +1399,9 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
 
   // Allocate memory in code heap and copy data from nmethod
   nmethod* nm_copy = (nmethod*) CodeCache::allocate(size(), code_blob_type);
+  if (nm_copy == nullptr) {
+    return nullptr;
+  }
   memcpy((void*) nm_copy, this, size());
 
   // Increment number of references to immutable data to share it between nmethods
@@ -1424,9 +1427,19 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
     nm_copy->_oop_maps = oop_maps()->clone();
   }
 
+  nm_copy->_gc_epoch = CodeCache::gc_epoch();
   nm_copy->_exception_cache = nullptr;
   nm_copy->_gc_data = nullptr;
   nm_copy->_compiled_ic_data = nullptr;
+
+  nm_copy->_osr_link = nullptr;
+
+  if (_osr_entry_point != nullptr) {
+    nm_copy->_osr_entry_point = (_osr_entry_point - (address) this) + (address) nm_copy;
+  }
+
+  nm_copy->_oops_do_mark_link = nullptr;
+  nm_copy->_oops_do_mark_nmethods = nullptr;
 
   if (_pc_desc_container != nullptr) {
     nm_copy->_pc_desc_container = new PcDescContainer(nm_copy->scopes_pcs_begin());
@@ -1444,10 +1457,6 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   while (iter.next()) {
     iter.reloc()->fix_relocation_after_move(&src, &dst);
   }
-
-  nm_copy->clear_inline_caches();
-
-  nm_copy->post_init();
 
   // To make dependency checking during class loading fast, record
   // the nmethod dependencies in the classes it is dependent on.
@@ -1472,8 +1481,10 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
     }
   }
 
+  nm_copy->post_init();
+
   // Update corresponding Java method to point to this nmethod
-  if (nm_copy->method()->code() == this) {
+  if (nm_copy->method() != nullptr && nm_copy->method()->code() == this) {
     MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
     methodHandle mh(Thread::current(), nm_copy->method());
     nm_copy->method()->set_code(mh, nm_copy);
