@@ -1458,6 +1458,8 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
     iter.reloc()->fix_relocation_after_move(&src, &dst);
   }
 
+  nm_copy->clear_inline_caches();
+
   // To make dependency checking during class loading fast, record
   // the nmethod dependencies in the classes it is dependent on.
   // This allows the dependency checking code to simply walk the
