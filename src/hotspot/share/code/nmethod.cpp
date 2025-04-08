@@ -1450,7 +1450,7 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   _dbg_strings.reuse();
 #endif
 
-  nm_copy->clear_inline_caches();
+  ICache::invalidate_range(nm_copy->code_begin(), nm_copy->code_size());
 
   // Fix relocation
   RelocIterator iter(nm_copy);
