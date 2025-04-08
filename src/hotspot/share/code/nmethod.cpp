@@ -1396,6 +1396,8 @@ nmethod::nmethod(
 
 nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   assert(SafepointSynchronize::is_at_safepoint(), "only called at safepoint");
+  assert_lock_strong(CodeCache_lock);
+  assert_lock_strong(NMethodState_lock);
 
   // Allocate memory in code heap and copy data from nmethod
   nmethod* nm_copy = (nmethod*) CodeCache::allocate(size(), code_blob_type);
@@ -1489,7 +1491,7 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
 
   // Update corresponding Java method to point to this nmethod
   if (nm_copy->method() != nullptr && nm_copy->method()->code() == this) {
-    MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
+    // MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
     methodHandle mh(Thread::current(), nm_copy->method());
     nm_copy->method()->set_code(mh, nm_copy);
   }
