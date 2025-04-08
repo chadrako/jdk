@@ -1450,6 +1450,8 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   _dbg_strings.reuse();
 #endif
 
+  nm_copy->clear_inline_caches();
+
   // Fix relocation
   RelocIterator iter(nm_copy);
   CodeBuffer src((CodeBlob *)this);
@@ -1457,8 +1459,6 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   while (iter.next()) {
     iter.reloc()->fix_relocation_after_move(&src, &dst);
   }
-
-  nm_copy->clear_inline_caches();
 
   // To make dependency checking during class loading fast, record
   // the nmethod dependencies in the classes it is dependent on.
