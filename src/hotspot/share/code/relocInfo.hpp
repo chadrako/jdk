@@ -1270,6 +1270,8 @@ class trampoline_stub_Relocation : public Relocation {
 
   void copy_into(RelocationHolder& holder) const override;
 
+  void fix_destination(nmethod* src, nmethod* dest);
+
  private:
   address _owner;    // Address of the NativeCall that owns the trampoline.
 

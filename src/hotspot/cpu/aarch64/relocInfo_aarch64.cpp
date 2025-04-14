@@ -98,6 +98,16 @@ void trampoline_stub_Relocation::pd_fix_owner_after_move() {
   call->set_destination(dest);
 }
 
+void trampoline_stub_Relocation::fix_destination(nmethod* src, nmethod* dest) {
+  address trampoline_addr = addr();
+  NativeCallTrampolineStub* trampoline = nativeCallTrampolineStub_at(trampoline_addr);
+  address trampoline_dest = trampoline->destination();
+
+  if (src->stub_contains(trampoline_dest)) {
+    int offset = trampoline_dest - src->stub_begin();
+    trampoline->set_destination(dest->stub_begin() + offset);
+  }
+}
 
 address* Relocation::pd_address_in_code() {
   return (address*)(addr() + 8);

@@ -1399,6 +1399,8 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   assert_lock_strong(CodeCache_lock);
   assert_lock_strong(NMethodState_lock);
 
+  run_nmethod_entry_barrier();
+
   // Allocate memory in code heap and copy data from nmethod
   nmethod* nm_copy = (nmethod*) CodeCache::allocate(size(), code_blob_type);
   if (nm_copy == nullptr) {
@@ -1452,11 +1454,18 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   _dbg_strings.reuse();
 #endif
 
-  ICache::invalidate_range(nm_copy->code_begin(), nm_copy->code_size());
+  // Fix trampoline stubs first
+  RelocIterator trampoline_iter(nm_copy);
+  while (trampoline_iter.next()) {
+    if (trampoline_iter.reloc()->type() == relocInfo::relocType::trampoline_stub_type) {
+      trampoline_stub_Relocation* trampoline_stub_reloc = (trampoline_stub_Relocation*)trampoline_iter.reloc();
+      trampoline_stub_reloc->fix_destination(this, nm_copy);
+    }
+  }
 
   // Fix relocation
   RelocIterator iter(nm_copy);
-  CodeBuffer src((CodeBlob *)this);
+  CodeBuffer src(this);
   CodeBuffer dst(nm_copy);
   while (iter.next()) {
     iter.reloc()->fix_relocation_after_move(&src, &dst);
@@ -1487,11 +1496,12 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
     }
   }
 
+  ICache::invalidate_range(nm_copy->code_begin(), nm_copy->code_size());
+
   nm_copy->post_init();
 
   // Update corresponding Java method to point to this nmethod
   if (nm_copy->method() != nullptr && nm_copy->method()->code() == this) {
-    // MutexLocker ml(NMethodState_lock, Mutex::_no_safepoint_check_flag);
     methodHandle mh(Thread::current(), nm_copy->method());
     nm_copy->method()->set_code(mh, nm_copy);
   }
