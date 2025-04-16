@@ -1436,6 +1436,8 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   nm_copy->_gc_data = nullptr;
   nm_copy->_compiled_ic_data = nullptr;
 
+  nm_copy->_deoptimization_generation = 0;
+
   nm_copy->_osr_link = nullptr;
 
   if (_osr_entry_point != nullptr) {
@@ -1468,7 +1470,8 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
   CodeBuffer src(this);
   CodeBuffer dst(nm_copy);
   while (iter.next()) {
-    iter.reloc()->fix_relocation_after_move(&src, &dst);
+    if (iter.reloc()->type() != relocInfo::static_call_type && iter.reloc()->type() != relocInfo::opt_virtual_call_type && iter.reloc()->type() != relocInfo::virtual_call_type)
+      iter.reloc()->fix_relocation_after_move(&src, &dst);
   }
 
   nm_copy->clear_inline_caches();
