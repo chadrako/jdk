@@ -855,11 +855,13 @@ void JVMCINMethodData::relocate_nmethod_mirror(nmethod* nm) {
   }
 
   JVMCIEnv* jvmciEnv = nullptr;
-  HotSpotJVMCI::InstalledCode::set_address(jvmciEnv, nmethod_mirror, (jlong)(nm));
+  // First set address to zero to make mirror invalid
+  HotSpotJVMCI::InstalledCode::set_address(jvmciEnv, nmethod_mirror, 0);
+
+  // Update the fields that have changed and set address last to make mirror valid again
   HotSpotJVMCI::InstalledCode::set_entryPoint(jvmciEnv, nmethod_mirror, (jlong)(nm->entry_point()));
-  HotSpotJVMCI::HotSpotInstalledCode::set_size(jvmciEnv, nmethod_mirror, (jlong)(nm->size()));
   HotSpotJVMCI::HotSpotInstalledCode::set_codeStart(jvmciEnv, nmethod_mirror, (jlong)(nm->code_begin()));
-  HotSpotJVMCI::HotSpotInstalledCode::set_codeSize(jvmciEnv, nmethod_mirror, (jlong)(nm->code_size()));
+  HotSpotJVMCI::InstalledCode::set_address(jvmciEnv, nmethod_mirror, (jlong)(nm));
 }
 
 // Handles to objects in the Hotspot heap.
