@@ -849,7 +849,7 @@ void JVMCINMethodData::clear_nmethod_mirror_index() {
 }
 
 void JVMCINMethodData::relocate_nmethod_mirror(nmethod* nm) {
-  oop nmethod_mirror = get_nmethod_mirror(nm, /* phantom_ref */ false);
+  oop nmethod_mirror = get_nmethod_mirror(nm, /* phantom_ref */ true);
   if (nmethod_mirror == nullptr) {
     return;
   }
