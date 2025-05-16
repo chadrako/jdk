@@ -36,6 +36,9 @@
 // Mutexes used in the VM (see comment in mutexLocker.hpp):
 
 Mutex*   NMethodState_lock            = nullptr;
+#if INCLUDE_JVMCI
+Mutex*   JVMCIMirror_lock             = nullptr;
+#endif
 Monitor* SystemDictionary_lock        = nullptr;
 Mutex*   InvokeMethodTypeTable_lock   = nullptr;
 Monitor* InvokeMethodIntrinsicTable_lock = nullptr;
@@ -315,6 +318,9 @@ void mutex_init() {
   MUTEX_DEFL(VtableStubs_lock               , PaddedMutex  , CompiledIC_lock);  // Also holds DumpTimeTable_lock
   MUTEX_DEFL(CodeCache_lock                 , PaddedMonitor, VtableStubs_lock);
   MUTEX_DEFL(NMethodState_lock              , PaddedMutex  , CodeCache_lock);
+#if INCLUDE_JVMCI
+  MUTEX_DEFL(JVMCIMirror_lock               , PaddedMutex  , NMethodState_lock);
+#endif
 
   // tty_lock is held when printing nmethod and its relocations which use this lock.
   MUTEX_DEFL(ExternalsRecorder_lock         , PaddedMutex  , tty_lock);

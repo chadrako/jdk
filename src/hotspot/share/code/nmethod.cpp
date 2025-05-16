@@ -1579,6 +1579,7 @@ nmethod* nmethod::relocate(CodeBlobType code_blob_type) {
 
 #if INCLUDE_JVMCI
     if (jvmci_nmethod_data() != nullptr) {
+      MutexLocker ml_JVMCIMirror_lock(JVMCIMirror_lock, Mutex::_no_safepoint_check_flag);
       nm_copy->jvmci_nmethod_data()->relocate_nmethod_mirror(nm_copy);
       jvmci_nmethod_data()->clear_nmethod_mirror_index();
     }

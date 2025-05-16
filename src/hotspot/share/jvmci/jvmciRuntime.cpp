@@ -810,6 +810,8 @@ void JVMCINMethodData::set_nmethod_mirror(nmethod* nm, oop new_mirror) {
 }
 
 void JVMCINMethodData::invalidate_nmethod_mirror(nmethod* nm) {
+  ConditionalMutexLocker ml(JVMCIMirror_lock, !JVMCIMirror_lock->owned_by_self(), Mutex::_no_safepoint_check_flag);
+
   oop nmethod_mirror = get_nmethod_mirror(nm, /* phantom_ref */ false);
   if (nmethod_mirror == nullptr) {
     return;
@@ -855,13 +857,13 @@ void JVMCINMethodData::relocate_nmethod_mirror(nmethod* nm) {
   }
 
   JVMCIEnv* jvmciEnv = nullptr;
-  // First set address to zero to make mirror invalid
-  HotSpotJVMCI::InstalledCode::set_address(jvmciEnv, nmethod_mirror, 0);
+  // First set entry point to zero to make mirror invalid
+  HotSpotJVMCI::InstalledCode::set_entryPoint(jvmciEnv, nmethod_mirror, 0);
 
-  // Update the fields that have changed and set address last to make mirror valid again
-  HotSpotJVMCI::InstalledCode::set_entryPoint(jvmciEnv, nmethod_mirror, (jlong)(nm->entry_point()));
+  // Update the fields that have changed and set entry point last to make mirror valid again
   HotSpotJVMCI::HotSpotInstalledCode::set_codeStart(jvmciEnv, nmethod_mirror, (jlong)(nm->code_begin()));
   HotSpotJVMCI::InstalledCode::set_address(jvmciEnv, nmethod_mirror, (jlong)(nm));
+  HotSpotJVMCI::InstalledCode::set_entryPoint(jvmciEnv, nmethod_mirror, (jlong)(nm->verified_entry_point()));
 }
 
 // Handles to objects in the Hotspot heap.

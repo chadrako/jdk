@@ -153,6 +153,7 @@ extern Monitor* ContinuationRelativize_lock;
 #if INCLUDE_JVMCI
 extern Monitor* JVMCI_lock;                      // protects global JVMCI critical sections
 extern Monitor* JVMCIRuntime_lock;               // protects critical sections for a specific JVMCIRuntime object
+extern Mutex*   JVMCIMirror_lock;
 #endif
 
 extern Mutex*   Bootclasspath_lock;

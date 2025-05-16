@@ -1730,6 +1730,7 @@ BasicType JVMCIEnv::kindToBasicType(JVMCIObject kind, JVMCI_TRAPS) {
 
 void JVMCIEnv::initialize_installed_code(JVMCIObject installed_code, CodeBlob* cb, JVMCI_TRAPS) {
   // Ensure that all updates to the InstalledCode fields are consistent.
+  MutexLocker ml(JVMCIMirror_lock, Mutex::_no_safepoint_check_flag);
   if (get_InstalledCode_address(installed_code) != 0) {
     JVMCI_THROW_MSG(InternalError, "InstalledCode instance already in use");
   }
@@ -1791,6 +1792,7 @@ void JVMCIEnv::invalidate_nmethod_mirror(JVMCIObject mirror, bool deoptimize, JV
 
     // A HotSpotNmethod instance can only reference a single nmethod
     // during its lifetime so simply clear it here.
+    MutexLocker ml(JVMCIMirror_lock, Mutex::_no_safepoint_check_flag);
     set_InstalledCode_address(mirror, 0);
   }
 }
@@ -1831,6 +1833,7 @@ nmethod* JVMCIEnv::lookup_nmethod(address code, jlong compile_id_snapshot) {
 
 
 CodeBlob* JVMCIEnv::get_code_blob(JVMCIObject obj) {
+  MutexLocker ml(JVMCIMirror_lock, Mutex::_no_safepoint_check_flag);
   address code = (address) get_InstalledCode_address(obj);
   if (code == nullptr) {
     return nullptr;
