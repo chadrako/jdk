@@ -119,7 +119,6 @@ class CodeCache : AllStatic {
   static void add_heap(ReservedSpace rs, const char* name, CodeBlobType code_blob_type);
   static CodeHeap* get_code_heap_containing(void* p);         // Returns the CodeHeap containing the given pointer, or nullptr
   static CodeHeap* get_code_heap(const void* cb);             // Returns the CodeHeap for the given CodeBlob
-public:
   static CodeHeap* get_code_heap(CodeBlobType code_blob_type);         // Returns the CodeHeap for the given CodeBlobType
   static ReservedSpace reserve_heap_memory(size_t size, size_t rs_ps); // Reserves one continuous chunk of memory for the CodeHeaps
 
