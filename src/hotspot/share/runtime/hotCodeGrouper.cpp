@@ -61,9 +61,9 @@ void HotCodeGrouper::initialize() {
   _is_initialized = true;
 }
 
-static inline bool steady_nmethod_count(int new_nmethods_count, int total_nmethods_count) {
+static inline bool steady_nmethod_count(size_t new_nmethods_count, size_t total_nmethods_count) {
   if (total_nmethods_count <= 0) {
-    log_trace(hotcodegrouper)("C2 nmethod count not steady. Total C2 nmethods %d <= 0", total_nmethods_count);
+    log_trace(hotcodegrouper)("C2 nmethod count not steady. Total C2 nmethods %ld <= 0", total_nmethods_count);
     return false;
   }
 
@@ -71,7 +71,7 @@ static inline bool steady_nmethod_count(int new_nmethods_count, int total_nmetho
   bool is_steady_nmethod_count = ratio_new < HotCodeSteadyThreshold;
 
   log_info(hotcodegrouper)("C2 nmethod count %s", is_steady_nmethod_count ? "steady" : "not steady");
-  log_trace(hotcodegrouper)("\t- New: %d. Total: %d. Ratio: %f. Threshold: %f", new_nmethods_count, total_nmethods_count, ratio_new, HotCodeSteadyThreshold);
+  log_trace(hotcodegrouper)("\t- New: %ld. Total: %ld. Ratio: %f. Threshold: %f", new_nmethods_count, total_nmethods_count, ratio_new, HotCodeSteadyThreshold);
 
   return is_steady_nmethod_count;
 }
