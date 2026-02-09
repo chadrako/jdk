@@ -304,8 +304,9 @@ void CodeCache::initialize_heaps() {
   non_nmethod.size = align_up(non_nmethod.size, min_size);
   profiled.size = align_up(profiled.size, min_size);
   non_profiled.size = align_up(non_profiled.size, min_size);
+  hot.size = align_up(hot.size, min_size);
 
-  size_t aligned_total = non_nmethod.size + profiled.size + non_profiled.size;
+  size_t aligned_total = non_nmethod.size + profiled.size + non_profiled.size + hot.size;
   if (!cache_size_set) {
     // If ReservedCodeCacheSize is explicitly set and exceeds CODE_CACHE_SIZE_LIMIT,
     // it is rejected by flag validation elsewhere. Here we only handle the case
@@ -313,15 +314,15 @@ void CodeCache::initialize_heaps() {
     // sizes (after alignment) exceed the platform limit.
     if (aligned_total > CODE_CACHE_SIZE_LIMIT) {
       err_msg message("ReservedCodeCacheSize (%zuK), Max (%zuK)."
-                      "Segments: NonNMethod (%zuK), NonProfiled (%zuK), Profiled (%zuK).",
+                      "Segments: NonNMethod (%zuK), NonProfiled (%zuK), Profiled (%zuK), Hot (%zuK).",
                       aligned_total/K, CODE_CACHE_SIZE_LIMIT/K,
-                      non_nmethod.size/K, non_profiled.size/K, profiled.size/K);
+                      non_nmethod.size/K, non_profiled.size/K, profiled.size/K, hot.size/K);
       vm_exit_during_initialization("Code cache size exceeds platform limit", message);
     }
     if (aligned_total != cache_size) {
       log_info(codecache)("ReservedCodeCache size %zuK changed to total segments size NonNMethod "
-                          "%zuK NonProfiled %zuK Profiled %zuK = %zuK",
-                          cache_size/K, non_nmethod.size/K, non_profiled.size/K, profiled.size/K, aligned_total/K);
+                          "%zuK NonProfiled %zuK Profiled %zuK Hot %zuK = %zuK",
+                          cache_size/K, non_nmethod.size/K, non_profiled.size/K, profiled.size/K, hot.size/K, aligned_total/K);
       // Adjust ReservedCodeCacheSize as necessary because it was not set explicitly
       cache_size = aligned_total;
     }
@@ -346,13 +347,17 @@ void CodeCache::initialize_heaps() {
         }
         if (profiled.enabled && !profiled.set && profiled.size > min_size) {
           profiled.size -= min_size;
+          if (--delta == 0) break;
+        }
+        if (hot.enabled && !hot.set && hot.size > min_size) {
+          hot.size -= min_size;
           delta--;
         }
         if (delta == start_delta) {
           break;
         }
       }
-      aligned_total = non_nmethod.size + profiled.size + non_profiled.size;
+      aligned_total = non_nmethod.size + profiled.size + non_profiled.size + hot.size;
     }
   }
 
@@ -405,6 +410,7 @@ void CodeCache::initialize_heaps() {
   FLAG_SET_ERGO(NonNMethodCodeHeapSize, non_nmethod.size);
   FLAG_SET_ERGO(ProfiledCodeHeapSize, profiled.size);
   FLAG_SET_ERGO(NonProfiledCodeHeapSize, non_profiled.size);
+  FLAG_SET_ERGO(HotCodeHeapSize, hot.size);
   FLAG_SET_ERGO(ReservedCodeCacheSize, cache_size);
 
   ReservedSpace rs = reserve_heap_memory(cache_size, ps);
