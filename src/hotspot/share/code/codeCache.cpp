@@ -217,17 +217,6 @@ static void set_size_of_unset_code_heap(CodeHeapInfo* heap, size_t available_siz
   heap->size = (available_size > (used_size + min_size)) ? (available_size - used_size) : min_size;
 }
 
-static void check_space_available_for_heap(CodeBlobType code_blob_type,
-                                           size_t heap_size,
-                                           size_t available_space) {
-  if (heap_size > available_space) {
-    err_msg msg("%s (%zuK) exceeds the available space (%zuK).",
-                get_code_heap_flag_name(code_blob_type), heap_size / K,
-                available_space / K);
-    vm_exit_during_initialization("Invalid code heap sizes", msg);
-  }
-}
-
 void CodeCache::initialize_heaps() {
   CodeHeapInfo non_nmethod = {NonNMethodCodeHeapSize, FLAG_IS_CMDLINE(NonNMethodCodeHeapSize), true};
   CodeHeapInfo profiled = {ProfiledCodeHeapSize, FLAG_IS_CMDLINE(ProfiledCodeHeapSize), true};
@@ -288,7 +277,11 @@ void CodeCache::initialize_heaps() {
       hot.size = MAX2((2 * non_profiled.size) / 10, min_size);
     }
     if (!(non_profiled.set && hot.set)) {
-      check_space_available_for_heap(CodeBlobType::MethodHot, hot.size, non_profiled.size);
+      if (hot.size > non_profiled.size) {
+        err_msg msg("Hot (%zuK) exceeds NonProfiled (%zuK).",
+                hot.size / K, non_profiled.size / K);
+        vm_exit_during_initialization("Invalid code heap sizes", msg);
+      }
       non_profiled.size -= hot.size;
     }
   }
