@@ -40,7 +40,11 @@ int       HotCodeGrouper::_new_c2_nmethods_count = 0;
 int       HotCodeGrouper::_total_c2_nmethods_count = 0;
 CodeHeap* HotCodeGrouper::hot_code_heap = nullptr;
 
+HotCodeGrouper::HotCodeGrouper() : JavaThread(thread_entry) {}
+
 void HotCodeGrouper::initialize() {
+  EXCEPTION_MARK;
+
   if (!HotCodeHeap) {
     return; // No hot code heap, no need for nmethod grouping
   }
@@ -63,26 +67,29 @@ void HotCodeGrouper::initialize() {
     return;
   }
 
-  NonJavaThread* nmethod_grouper_thread = new HotCodeGrouper();
-  if (os::create_thread(nmethod_grouper_thread, os::os_thread)) {
-    os::start_thread(nmethod_grouper_thread);
-  } else {
-    vm_exit_during_initialization("Failed to create C2 nmethod grouper thread");
-  }
+  Handle thread_oop = JavaThread::create_system_thread_object("HotCodeGrouperThread", CHECK);
+  HotCodeGrouper* thread = new HotCodeGrouper();
+  JavaThread::vm_exit_on_osthread_failure(thread);
+  JavaThread::start_internal_daemon(THREAD, thread, thread_oop, NormPriority);
+
   _is_initialized = true;
 }
 
-static inline bool steady_nmethod_count(int new_nmethods_count, int total_nmethods_count) {
-  if (total_nmethods_count <= 0) {
-    log_trace(hotcodegrouper)("C2 nmethod count not steady. Total C2 nmethods %d <= 0", total_nmethods_count);
+bool HotCodeGrouper::is_nmethod_count_steady() {
+  MutexLocker ml_CodeCache_lock(CodeCache_lock, Mutex::_no_safepoint_check_flag);
+
+  if (_total_c2_nmethods_count <= 0) {
+    log_trace(hotcodegrouper)("C2 nmethod count not steady. Total C2 nmethods %d <= 0", _total_c2_nmethods_count);
     return false;
   }
 
-  const double ratio_new = (double)new_nmethods_count / total_nmethods_count;
+  const double ratio_new = (double)_new_c2_nmethods_count / _total_c2_nmethods_count;
   bool is_steady_nmethod_count = ratio_new < HotCodeSteadyThreshold;
 
   log_info(hotcodegrouper)("C2 nmethod count %s", is_steady_nmethod_count ? "steady" : "not steady");
-  log_trace(hotcodegrouper)("\t- New: %d. Total: %d. Ratio: %f. Threshold: %f", new_nmethods_count, total_nmethods_count, ratio_new, HotCodeSteadyThreshold);
+  log_trace(hotcodegrouper)("\t- New: %d. Total: %d. Ratio: %f. Threshold: %f", _new_c2_nmethods_count, _total_c2_nmethods_count, ratio_new, HotCodeSteadyThreshold);
+
+  _new_c2_nmethods_count = 0;
 
   return is_steady_nmethod_count;
 }
@@ -92,30 +99,21 @@ bool HotCodeGrouper::hot_heap_has_space(size_t size) {
   return hot_code_heap->unallocated_capacity() > size;
 }
 
-void HotCodeGrouper::run() {
+void HotCodeGrouper::thread_entry(JavaThread* thread, TRAPS) {
   // Initial sleep to allow JVM to warm up
-  os::naked_sleep(HotCodeStartupDelaySeconds * 1000);
+  thread->sleep(HotCodeStartupDelaySeconds * 1000);
 
   while (true) {
     ResourceMark rm;
 
-    { // Acquire CodeCache_lock and check if c2 nmethod count is steady
-      MutexLocker ml_CodeCache_lock(CodeCache_lock, Mutex::_no_safepoint_check_flag);
-      bool is_steady_nmethod_count = steady_nmethod_count(_new_c2_nmethods_count, _total_c2_nmethods_count);
-      _new_c2_nmethods_count = 0;
-
-      if (!is_steady_nmethod_count) {
-        continue;
-      }
-    }
-
-    { // Sample application and group hot nmethods
+    // Sample application and group hot nmethods if nmethod count is steady
+    if (is_nmethod_count_steady()) {
       ThreadSampler sampler;
-      sampler.do_sampling();
+      sampler.do_sampling(thread);
       do_grouping(sampler);
     }
 
-    os::naked_sleep(HotCodeIntervalSeconds * 1000);
+    thread->sleep(HotCodeIntervalSeconds * 1000);
   }
 }
 

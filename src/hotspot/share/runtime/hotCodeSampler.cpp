@@ -31,7 +31,7 @@
 
 ThreadSampler* ThreadSampler::_current_sampler = nullptr;
 
-void ThreadSampler::do_sampling() {
+void ThreadSampler::do_sampling(JavaThread* thread) {
   log_info(hotcodegrouper)("Sampling...");
 
   int total_samples = 0;
@@ -80,7 +80,7 @@ void ThreadSampler::do_sampling() {
       return;
     }
 
-    os::naked_sleep(rand_sampling_period_ms());
+    thread->sleep(rand_sampling_period_ms());
   }
 }
 
