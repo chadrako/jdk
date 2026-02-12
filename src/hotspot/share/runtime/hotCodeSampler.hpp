@@ -73,7 +73,7 @@ class ThreadSampler : public StackObj {
   static ThreadSampler* _current_sampler;
 
   // Table of nmethods found during profiling with sample count
-  ResizeableHashTable<nmethod*, int, AnyObj::C_HEAP, mtCompiler> _samples;
+  ResizeableHashTable<nmethod*, int, AnyObj::C_HEAP, mtInternal> _samples;
 
   int _hot_sample_count;
   int _non_profiled_sample_count;
@@ -92,7 +92,7 @@ class ThreadSampler : public StackObj {
   ThreadSampler() : _samples(INITIAL_TABLE_SIZE, HotCodeSampleSeconds * 1000 / max_sampling_period_ms()), _hot_sample_count(0), _non_profiled_sample_count(0) {}
 
   // Sample and generate the candidate nmethods for grouping
-  void do_sampling();
+  void do_sampling(JavaThread* thread);
 
   // Get number of samples for nmethod. Returns zero if not found
   int get_sample_count(nmethod* nm) {

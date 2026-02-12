@@ -27,11 +27,11 @@
 #define SHARE_RUNTIME_HOTCODEGROUPER_HPP
 
 #include "code/codeCache.hpp"
-#include "runtime/nonJavaThread.hpp"
+#include "runtime/javaThread.hpp"
 
 class ThreadSampler;
 
-class HotCodeGrouper : public NonJavaThread {
+class HotCodeGrouper : public JavaThread {
  private:
   static bool _is_initialized;
 
@@ -40,20 +40,19 @@ class HotCodeGrouper : public NonJavaThread {
 
   static CodeHeap* hot_code_heap;
 
-  void do_grouping(ThreadSampler& sampler);
+  HotCodeGrouper();
+
+  static void do_grouping(ThreadSampler& sampler);
 
  public:
 
-  void run() override;
-
-  virtual const char* name()      const override { return "Hot Code Grouper Thread"; }
-  virtual const char* type_name() const override { return "HotCodeGrouper"; }
-
   static void initialize();
+  static void thread_entry(JavaThread* thread, TRAPS);
   static void unregister_nmethod(nmethod* nm);
   static void register_nmethod(nmethod* nm);
 
-  bool hot_heap_has_space(size_t size);
+  static bool hot_heap_has_space(size_t size);
+  static bool is_nmethod_count_steady();
 };
 
 #endif // SHARE_RUNTIME_HOTCODEGROUPER_HPP
