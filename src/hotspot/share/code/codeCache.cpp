@@ -191,27 +191,6 @@ struct CodeHeapInfo {
   bool enabled;
 };
 
-// Returns the name of the VM option to set the size of the corresponding CodeHeap
-static const char* get_code_heap_flag_name(CodeBlobType code_blob_type) {
-  switch(code_blob_type) {
-  case CodeBlobType::NonNMethod:
-    return "NonNMethodCodeHeapSize";
-    break;
-  case CodeBlobType::MethodNonProfiled:
-    return "NonProfiledCodeHeapSize";
-    break;
-  case CodeBlobType::MethodProfiled:
-    return "ProfiledCodeHeapSize";
-    break;
-  case CodeBlobType::MethodHot:
-    return "HotCodeHeapSize";
-    break;
-  default:
-    ShouldNotReachHere();
-    return nullptr;
-  }
-}
-
 static void set_size_of_unset_code_heap(CodeHeapInfo* heap, size_t available_size, size_t used_size, size_t min_size) {
   assert(!heap->set, "sanity");
   heap->size = (available_size > (used_size + min_size)) ? (available_size - used_size) : min_size;
@@ -483,6 +462,27 @@ bool CodeCache::heap_available(CodeBlobType code_blob_type) {
     return (code_blob_type == CodeBlobType::NonNMethod) ||
            (code_blob_type == CodeBlobType::MethodNonProfiled)
            COMPILER2_PRESENT(|| ((code_blob_type == CodeBlobType::MethodHot) && HotCodeHeap));
+  }
+}
+
+// Returns the name of the VM option to set the size of the corresponding CodeHeap
+static const char* get_code_heap_flag_name(CodeBlobType code_blob_type) {
+  switch(code_blob_type) {
+  case CodeBlobType::NonNMethod:
+    return "NonNMethodCodeHeapSize";
+    break;
+  case CodeBlobType::MethodNonProfiled:
+    return "NonProfiledCodeHeapSize";
+    break;
+  case CodeBlobType::MethodProfiled:
+    return "ProfiledCodeHeapSize";
+    break;
+  case CodeBlobType::MethodHot:
+    return "HotCodeHeapSize";
+    break;
+  default:
+    ShouldNotReachHere();
+    return nullptr;
   }
 }
 

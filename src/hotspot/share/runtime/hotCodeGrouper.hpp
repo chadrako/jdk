@@ -38,8 +38,6 @@ class HotCodeGrouper : public JavaThread {
   static int _new_c2_nmethods_count;
   static int _total_c2_nmethods_count;
 
-  static CodeHeap* hot_code_heap;
-
   HotCodeGrouper();
 
   static void do_grouping(ThreadSampler& sampler);

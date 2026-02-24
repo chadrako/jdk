@@ -38,34 +38,17 @@
 bool      HotCodeGrouper::_is_initialized = false;
 int       HotCodeGrouper::_new_c2_nmethods_count = 0;
 int       HotCodeGrouper::_total_c2_nmethods_count = 0;
-CodeHeap* HotCodeGrouper::hot_code_heap = nullptr;
 
 HotCodeGrouper::HotCodeGrouper() : JavaThread(thread_entry) {}
 
 void HotCodeGrouper::initialize() {
   EXCEPTION_MARK;
 
-  if (!HotCodeHeap) {
-    return; // No hot code heap, no need for nmethod grouping
-  }
-
+  assert(HotCodeHeap, "HotCodeGrouper requires HotCodeHeap enabled");
   assert(CompilerConfig::is_c2_enabled(), "HotCodeGrouper requires C2 enabled");
   assert(NMethodRelocation, "HotCodeGrouper requires NMethodRelocation enabled");
   assert(HotCodeHeapSize > 0, "HotCodeHeapSize must be non-zero to use HotCodeGrouper");
-
-  // Find HotCodeHeap
-  const GrowableArray<CodeHeap*>* heaps = CodeCache::nmethod_heaps();
-  for (GrowableArrayIterator<CodeHeap*> heap = heaps->begin(); heap != heaps->end(); ++heap) {
-    if ((*heap)->accepts(CodeBlobType::MethodHot)) {
-      hot_code_heap = *heap;
-      break;
-    }
-  }
-
-  // If the hot code heap is not found return and remain uninitialized
-  if (hot_code_heap == nullptr) {
-    return;
-  }
+  assert(CodeCache::get_code_heap(CodeBlobType::MethodHot) != nullptr, "Hot code heap not found");
 
   Handle thread_oop = JavaThread::create_system_thread_object("HotCodeGrouperThread", CHECK);
   HotCodeGrouper* thread = new HotCodeGrouper();
@@ -92,11 +75,6 @@ bool HotCodeGrouper::is_nmethod_count_steady() {
   _new_c2_nmethods_count = 0;
 
   return is_steady_nmethod_count;
-}
-
-bool HotCodeGrouper::hot_heap_has_space(size_t size) {
-  assert(hot_code_heap != nullptr, "must initialize HotCodeGrouper");
-  return hot_code_heap->unallocated_capacity() > size;
 }
 
 void HotCodeGrouper::thread_entry(JavaThread* thread, TRAPS) {
@@ -141,17 +119,18 @@ void HotCodeGrouper::do_grouping(ThreadSampler& sampler) {
 
     // Verify that nmethod address is still valid and not in hot code heap
     nmethod* nm = blob->as_nmethod_or_null();
-    if (nm != candidate || !nm->is_in_use() || !nm->is_compiled_by_c2() || CodeCache::get_code_blob_type(nm) == CodeBlobType::MethodHot) {
+    if (nm != candidate || !nm->is_in_use() || !nm->is_compiled_by_c2()) {
       continue;
     }
 
-    if (!hot_heap_has_space(nm->size())) {
+    if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)nm->size()) {
       log_info(hotcodegrouper)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
-        hot_code_heap->unallocated_capacity(), nm->size());
+        CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), nm->size());
       return;
     }
 
-    { // Relocate caller
+    // Relocate caller
+    if (CodeCache::get_code_blob_type(nm) != CodeBlobType::MethodHot) {
       CompiledICLocker ic_locker(nm);
       if (nm->relocate(CodeBlobType::MethodHot) != nullptr) {
         sampler.update_sample_count(nm);
@@ -198,9 +177,9 @@ void HotCodeGrouper::do_grouping(ThreadSampler& sampler) {
         continue;
       }
 
-      if (!hot_heap_has_space(actual_dest_nm->size())) {
+      if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)actual_dest_nm->size()) {
         log_info(hotcodegrouper)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
-          hot_code_heap->unallocated_capacity(), actual_dest_nm->size());
+          CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), actual_dest_nm->size());
         return;
       }
 
