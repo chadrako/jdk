@@ -42,6 +42,8 @@ class HotCodeGrouper : public JavaThread {
 
   static void do_grouping(ThreadSampler& sampler);
 
+  static void do_relocation(ThreadSampler& sampler, void* candidate, int callee_level);
+
  public:
 
   static void initialize();

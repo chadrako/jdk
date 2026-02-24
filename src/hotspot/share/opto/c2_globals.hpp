@@ -926,6 +926,10 @@
   product(uintx, HotCodeMaxSamplingMs, 15,                                  \
           "Maximum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
+                                                                            \
+  product(uintx, HotCodeCalleeLevel, 0,                                     \
+          "Number of levels of callees to relocate per candidate")          \
+          range(0, max_juint)                                               \
 
 // end of C2_FLAGS
 

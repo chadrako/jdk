@@ -111,36 +111,55 @@ void HotCodeGrouper::do_grouping(ThreadSampler& sampler) {
     MutexLocker ml_CompiledIC_lock(CompiledIC_lock, Mutex::_no_safepoint_check_flag);
     MutexLocker ml_CodeCache_lock(CodeCache_lock, Mutex::_no_safepoint_check_flag);
 
-    // Verify that address still points to CodeBlob
-    CodeBlob* blob = CodeCache::find_blob(candidate);
-    if (blob == nullptr) {
-      continue;
-    }
+    do_relocation(sampler, candidate, HotCodeCalleeLevel);
+  }
+}
 
-    // Verify that nmethod address is still valid and not in hot code heap
-    nmethod* nm = blob->as_nmethod_or_null();
-    if (nm != candidate || !nm->is_in_use() || !nm->is_compiled_by_c2()) {
-      continue;
-    }
+void HotCodeGrouper::do_relocation(ThreadSampler& sampler, void* candidate, int callee_level) {
+  if (candidate == nullptr) {
+    return;
+  }
 
-    if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)nm->size()) {
-      log_info(hotcodegrouper)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
-        CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), nm->size());
-      return;
-    }
+  // Verify that address still points to CodeBlob
+  CodeBlob* blob = CodeCache::find_blob(candidate);
+  if (blob == nullptr) {
+    return;
+  }
 
-    // Relocate caller
-    if (CodeCache::get_code_blob_type(nm) != CodeBlobType::MethodHot) {
-      CompiledICLocker ic_locker(nm);
-      if (nm->relocate(CodeBlobType::MethodHot) != nullptr) {
-        sampler.update_sample_count(nm);
-      }
-    }
+  // Verify that nmethod address is still valid
+  nmethod* nm = blob->as_nmethod_or_null();
+  if (nm != candidate) {
+    return;
+  }
 
+  // The candidate may have been recompiled or already relocated.
+  // Retrieve the latest nmethod from the Method
+  nm = nm->method()->code();
+
+  // Verify the nmethod is stil valid for relocation
+  if (nm == nullptr || !nm->is_in_use() || !nm->is_compiled_by_c2()) {
+    return;
+  }
+
+  // Verify code heap has space
+  if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)nm->size()) {
+    log_info(hotcodegrouper)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
+      CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), nm->size());
+    return;
+  }
+
+  // Perform relocation
+  if (CodeCache::get_code_blob_type(nm) != CodeBlobType::MethodHot) {
+    CompiledICLocker ic_locker(nm);
+    if (nm->relocate(CodeBlobType::MethodHot) != nullptr) {
+      sampler.update_sample_count(nm);
+    }
+  }
+
+  if (callee_level > 0) {
     // Loop over relocations to relocate callees
     RelocIterator relocIter(nm);
     while (relocIter.next()) {
-
       // Check is a call
       Relocation* reloc = relocIter.reloc();
       if(!reloc->is_call()) {
@@ -150,45 +169,8 @@ void HotCodeGrouper::do_grouping(ThreadSampler& sampler) {
       // Find the call destination address
       address dest = ((CallRelocation*) reloc)->destination();
 
-      // Check if the destination is to something in the code cache
-      if (!CodeCache::contains(dest)) {
-        continue;
-      }
-
-      // Check if destination is a CodeBlob
-      CodeBlob* dest_blob = CodeCache::find_blob(dest);
-      if (dest_blob == nullptr) {
-        continue;
-      }
-
-      // Check if the destination is an nmethod
-      nmethod* dest_nm = dest_blob->as_nmethod_or_null();
-      if (dest_nm == nullptr || dest_nm->method() == nullptr) {
-        continue;
-      }
-
-      // Retrieve the latest nmethod for the destination's Method.
-      // Due to relocation or recompilation, the destination may not yet reference
-      // the Method’s most up to date nmethod.
-      nmethod* actual_dest_nm = dest_nm->method()->code();
-
-      // Check is valid
-      if (actual_dest_nm == nullptr || !actual_dest_nm->is_in_use() || !actual_dest_nm->is_compiled_by_c2() || CodeCache::get_code_blob_type(actual_dest_nm) == CodeBlobType::MethodHot) {
-        continue;
-      }
-
-      if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)actual_dest_nm->size()) {
-        log_info(hotcodegrouper)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
-          CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), actual_dest_nm->size());
-        return;
-      }
-
-      { // Relocate callee
-        CompiledICLocker ic_locker(actual_dest_nm);
-        if (actual_dest_nm->relocate(CodeBlobType::MethodHot) != nullptr) {
-          sampler.update_sample_count(actual_dest_nm);
-        }
-      }
+      // Recursively relocate callees
+      do_relocation(sampler, dest, callee_level - 1);
     }
   }
 }
