@@ -898,31 +898,33 @@
           "Enable the code heap for hot C2 nmethods")                       \
                                                                             \
   product(double, HotCodeSampleRatio, 0.8,                                  \
-          "Ratio of samples from hot nmethods to consider grouping done")   \
+          "Minimum ratio of profiling samples that must be in "             \
+          "the MethodHot heap before stopping grouping")                    \
           range(0.0, 1.0)                                                   \
                                                                             \
   product(double, HotCodeSteadyThreshold, 0.05,                             \
-          "Ratio of new to total C2 nmethods to be considered steady")      \
+          "Maximum ratio of newly compiled to total C2 nmethods "           \
+          "to treat nmethod count as stable")                               \
           range(0.0, 1.0)                                                   \
                                                                             \
   product(uintx, HotCodeIntervalSeconds, 300,                               \
-          "Time between hot code grouping runs")                            \
+          "Seconds between hot code grouping attempts")                     \
           range(0, max_juint)                                               \
                                                                             \
   product(uintx, HotCodeSampleSeconds, 120,                                 \
-          "Amount of time to sample application")                           \
+          "Seconds to sample application threads per grouping attempt")     \
           range(0, max_juint)                                               \
                                                                             \
   product(uintx, HotCodeStartupDelaySeconds, 120,                           \
-          "Amount of time before starting HotCodeGrouper")                  \
+          "Seconds to delay before starting hot code grouping thread")      \
           range(0, max_juint)                                               \
                                                                             \
   product(uintx, HotCodeMinSamplingMs, 5,                                   \
-          "Amount of time before starting HotCodeGrouper")                  \
+          "Minimum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
                                                                             \
   product(uintx, HotCodeMaxSamplingMs, 15,                                  \
-          "Amount of time before starting HotCodeGrouper")                  \
+          "Maximum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
 
 // end of C2_FLAGS
