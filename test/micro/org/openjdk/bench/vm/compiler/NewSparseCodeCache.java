@@ -32,6 +32,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
@@ -70,8 +71,11 @@ import jdk.test.whitebox.WhiteBox;
     "-XX:-UseCodeCacheFlushing",
     "-XX:-TieredCompilation",
     "-XX:+SegmentedCodeCache",
-    "-XX:ReservedCodeCacheSize=1g",
-    "-XX:InitialCodeCacheSize=1g",
+    "-XX:ReservedCodeCacheSize=1024m",
+    "-XX:InitialCodeCacheSize=1024m",
+    "-XX:NonNMethodCodeHeapSize=8m",
+    "-XX:NonProfiledCodeHeapSize=1016m",
+    "-XX:ProfiledCodeHeapSize=0",
     "-XX:+PrintCodeCache"
 })
 
