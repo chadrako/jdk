@@ -67,6 +67,8 @@ import jdk.test.whitebox.code.NMethod;
     "-XX:+UnlockExperimentalVMOptions",
     "-XX:+WhiteBoxAPI",
     "-Xbootclasspath/a:lib-test/wb.jar",
+    "-XX:CompileCommand=compileonly,org.openjdk.bench.vm.compiler.NewSparseCodeCache::callMethods",
+    "-XX:CompileCommand=dontinline,org.openjdk.bench.vm.compiler.NewSparseCodeCache::callMethods",
     "-XX:CompileCommand=compileonly,A::sum",
     "-XX:CompileCommand=dontinline,A::sum",
     "-XX:-UseCodeCacheFlushing",
@@ -81,7 +83,6 @@ public class NewSparseCodeCache {
 
     private static final int C2_LEVEL = 4;
     private static final int DUMMY_BLOB_SIZE = 1024 * 1024;
-    private static final int DUMMY_BLOB_COUNT = 128;
 
     static byte[] num1;
     static byte[] num2;
@@ -199,17 +200,6 @@ public class NewSparseCodeCache {
         }
     }
 
-    private void allocateDummyBlobs(int count, int size, int codeBlobType) {
-        getWhiteBox().lockCompilation();
-        for (int i = 0; i < count; i++) {
-            var dummyBlob = getWhiteBox().allocateCodeBlob(size, codeBlobType);
-            if (dummyBlob == 0) {
-                throw new IllegalStateException("Failed to allocate dummy blob.");
-            }
-        }
-        getWhiteBox().unlockCompilation();
-    }
-
     private void generateCode() throws Exception {
         initNums();
 
@@ -228,17 +218,11 @@ public class NewSparseCodeCache {
 
             getWhiteBox().lockCompilation();
             NMethod nmethod = methods[i].getNMethod();
-            long regionStart = nmethod.address & ~(codeRegionSize - 1);
-            long regionEnd = regionStart + codeRegionSize;
-            long remainingSpaceInRegion = regionEnd - nmethod.address - nmethod.size;
-
-            if (remainingSpaceInRegion > 0) {
-                getWhiteBox().allocateCodeBlob(
-                    (int)remainingSpaceInRegion,
-                    nmethod.code_blob_type.id);
-            }
+            long dummyBlob = getWhiteBox().allocateCodeBlob(codeRegionSize, nmethod.code_blob_type.id);
             getWhiteBox().unlockCompilation();
         }
+
+        compileCallMethods();
 
         getWhiteBox().lockCompilation();
         NMethod lastNMethod = methods[activeMethodCount - 1].getNMethod();
@@ -250,6 +234,22 @@ public class NewSparseCodeCache {
             }
         }
         getWhiteBox().unlockCompilation();
+    }
+
+    private void compileCallMethods() throws Exception {
+        var threadState = new ThreadState();
+        threadState.setup();
+        callMethods(threadState);
+        Method method = NewSparseCodeCache.class.getDeclaredMethod("callMethods", ThreadState.class);
+        getWhiteBox().markMethodProfiled(method);
+        getWhiteBox().enqueueMethodForCompilation(method, C2_LEVEL);
+        while (getWhiteBox().isMethodQueuedForCompilation(method)) {
+            Thread.onSpinWait();
+        }
+        if (getWhiteBox().getMethodCompilationLevel(method) != C2_LEVEL) {
+            throw new IllegalStateException("Method NewSparseCodeCache::callMethods is not compiled by C2.");
+        }
+        getWhiteBox().testSetDontInlineMethod(method, true);
     }
 
     @Setup(Level.Trial)
