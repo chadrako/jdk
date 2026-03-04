@@ -70,18 +70,20 @@ import jdk.test.whitebox.WhiteBox;
     "-XX:-UseCodeCacheFlushing",
     "-XX:-TieredCompilation",
     "-XX:+SegmentedCodeCache",
-    "-XX:ReservedCodeCacheSize=512m",
-    "-XX:InitialCodeCacheSize=512m",
+    "-XX:ReservedCodeCacheSize=1g",
+    "-XX:InitialCodeCacheSize=1g",
     "-XX:+PrintCodeCache"
 })
+
 public class NewSparseCodeCache {
 
     private static final int C2_LEVEL = 4;
     private static final int DUMMY_BLOB_SIZE = 1024 * 1024;
-    private static final int LARGE_GAP_SIZE = 128 * 1024 * 1024; // 128MB gap before callMethods()
+    private static final int LARGE_GAP_SIZE = 256 * 1024 * 1024; // 256MB gap before callMethods()
     private static final int BLOB_TYPE = 0; // BlobType.MethodNonProfiled.id
     private static final int CALL_METHODS_WARMUP_ITERATIONS = 20_000;
-    private static final int BENCHMARK_WARMUP_ITERATIONS = 1;
+    private static final int BENCHMARK_WARMUP_ITERATIONS = 50;
+    private static final int BENCHMARK_MEASURE_ITERATIONS = 10;
 
     private static WhiteBox WB;
 
@@ -90,6 +92,351 @@ public class NewSparseCodeCache {
 
     @Param({"2097152"})
     public int codeRegionSize;
+
+    private static void initWhiteBox() {
+        WB = WhiteBox.getWhiteBox();
+    }
+
+    private void compileWithC2(Method method) throws Exception {
+        WB.enqueueMethodForCompilation(method, C2_LEVEL);
+        while (WB.isMethodQueuedForCompilation(method)) {
+            Thread.onSpinWait();
+        }
+        if (WB.getMethodCompilationLevel(method) != C2_LEVEL) {
+            throw new IllegalStateException("Method " + method + " is not compiled by C2.");
+        }
+    }
+
+    private void compileMethodWithSpacing(String methodName) throws Exception {
+        Method method = NewSparseCodeCache.class.getDeclaredMethod(methodName);
+
+        WB.markMethodProfiled(method);
+        WB.testSetDontInlineMethod(method, true);
+
+        compileWithC2(method);
+
+        WB.lockCompilation();
+        WB.allocateCodeBlob(codeRegionSize, BLOB_TYPE);
+        WB.unlockCompilation();
+    }
+
+    private void generateCode() throws Exception {
+        if ((codeRegionSize & (codeRegionSize - 1)) != 0) {
+            throw new IllegalArgumentException("codeRegionSize = " + codeRegionSize
+                + ". 'codeRegionSize' must be a power of 2.");
+        }
+
+        // Step 1: Compile methods with codeRegionSize gaps after each
+        for (int i = 0; i < activeMethodCount; i++) {
+            compileMethodWithSpacing("method" + i);
+        }
+
+        // Step 2: Allocate 256MB gap before callMethods()
+        WB.lockCompilation();
+        WB.allocateCodeBlob(LARGE_GAP_SIZE, BLOB_TYPE);
+        WB.unlockCompilation();
+
+        // Step 3: Compile callMethods()
+        compileCallMethods();
+
+        // Step 4: Fill remaining code cache with dummy blobs
+        WB.lockCompilation();
+        while (true) {
+            long blob = WB.allocateCodeBlob(DUMMY_BLOB_SIZE, BLOB_TYPE);
+            if (blob == 0) {
+                break;
+            }
+        }
+        WB.unlockCompilation();
+    }
+
+    private void compileCallMethods() throws Exception {
+        // Warmup callMethods before compilation
+        for (int i = 0; i < CALL_METHODS_WARMUP_ITERATIONS; i++) {
+            callMethods();
+        }
+
+        Method method = NewSparseCodeCache.class.getDeclaredMethod("callMethods");
+        WB.markMethodProfiled(method);
+        compileWithC2(method);
+        WB.testSetDontInlineMethod(method, true);
+    }
+
+    @Setup(Level.Trial)
+    public void setupCodeCache() throws Exception {
+        initWhiteBox();
+        generateCode();
+    }
+
+    @Benchmark
+    @Warmup(iterations = BENCHMARK_WARMUP_ITERATIONS)
+    @Measurement(iterations = BENCHMARK_MEASURE_ITERATIONS)
+    public void benchmarkCallMethods() {
+        callMethods();
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    @SuppressWarnings("fallthrough")  // Intentional fallthrough to call all active methods
+    private void callMethods() {
+        switch (activeMethodCount) {
+            case 128:
+                method127();
+            case 127:
+                method126();
+            case 126:
+                method125();
+            case 125:
+                method124();
+            case 124:
+                method123();
+            case 123:
+                method122();
+            case 122:
+                method121();
+            case 121:
+                method120();
+            case 120:
+                method119();
+            case 119:
+                method118();
+            case 118:
+                method117();
+            case 117:
+                method116();
+            case 116:
+                method115();
+            case 115:
+                method114();
+            case 114:
+                method113();
+            case 113:
+                method112();
+            case 112:
+                method111();
+            case 111:
+                method110();
+            case 110:
+                method109();
+            case 109:
+                method108();
+            case 108:
+                method107();
+            case 107:
+                method106();
+            case 106:
+                method105();
+            case 105:
+                method104();
+            case 104:
+                method103();
+            case 103:
+                method102();
+            case 102:
+                method101();
+            case 101:
+                method100();
+            case 100:
+                method99();
+            case 99:
+                method98();
+            case 98:
+                method97();
+            case 97:
+                method96();
+            case 96:
+                method95();
+            case 95:
+                method94();
+            case 94:
+                method93();
+            case 93:
+                method92();
+            case 92:
+                method91();
+            case 91:
+                method90();
+            case 90:
+                method89();
+            case 89:
+                method88();
+            case 88:
+                method87();
+            case 87:
+                method86();
+            case 86:
+                method85();
+            case 85:
+                method84();
+            case 84:
+                method83();
+            case 83:
+                method82();
+            case 82:
+                method81();
+            case 81:
+                method80();
+            case 80:
+                method79();
+            case 79:
+                method78();
+            case 78:
+                method77();
+            case 77:
+                method76();
+            case 76:
+                method75();
+            case 75:
+                method74();
+            case 74:
+                method73();
+            case 73:
+                method72();
+            case 72:
+                method71();
+            case 71:
+                method70();
+            case 70:
+                method69();
+            case 69:
+                method68();
+            case 68:
+                method67();
+            case 67:
+                method66();
+            case 66:
+                method65();
+            case 65:
+                method64();
+            case 64:
+                method63();
+            case 63:
+                method62();
+            case 62:
+                method61();
+            case 61:
+                method60();
+            case 60:
+                method59();
+            case 59:
+                method58();
+            case 58:
+                method57();
+            case 57:
+                method56();
+            case 56:
+                method55();
+            case 55:
+                method54();
+            case 54:
+                method53();
+            case 53:
+                method52();
+            case 52:
+                method51();
+            case 51:
+                method50();
+            case 50:
+                method49();
+            case 49:
+                method48();
+            case 48:
+                method47();
+            case 47:
+                method46();
+            case 46:
+                method45();
+            case 45:
+                method44();
+            case 44:
+                method43();
+            case 43:
+                method42();
+            case 42:
+                method41();
+            case 41:
+                method40();
+            case 40:
+                method39();
+            case 39:
+                method38();
+            case 38:
+                method37();
+            case 37:
+                method36();
+            case 36:
+                method35();
+            case 35:
+                method34();
+            case 34:
+                method33();
+            case 33:
+                method32();
+            case 32:
+                method31();
+            case 31:
+                method30();
+            case 30:
+                method29();
+            case 29:
+                method28();
+            case 28:
+                method27();
+            case 27:
+                method26();
+            case 26:
+                method25();
+            case 25:
+                method24();
+            case 24:
+                method23();
+            case 23:
+                method22();
+            case 22:
+                method21();
+            case 21:
+                method20();
+            case 20:
+                method19();
+            case 19:
+                method18();
+            case 18:
+                method17();
+            case 17:
+                method16();
+            case 16:
+                method15();
+            case 15:
+                method14();
+            case 14:
+                method13();
+            case 13:
+                method12();
+            case 12:
+                method11();
+            case 11:
+                method10();
+            case 10:
+                method9();
+            case 9:
+                method8();
+            case 8:
+                method7();
+            case 7:
+                method6();
+            case 6:
+                method5();
+            case 5:
+                method4();
+            case 4:
+                method3();
+            case 3:
+                method2();
+            case 2:
+                method1();
+            case 1:
+                method0();
+        }
+    }
 
     // Methods to be compiled 2MB apart
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
@@ -476,347 +823,4 @@ public class NewSparseCodeCache {
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     private void method127() {}
 
-    private static void initWhiteBox() {
-        WB = WhiteBox.getWhiteBox();
-    }
-
-    private void compileWithC2(Method method) throws Exception {
-        WB.enqueueMethodForCompilation(method, C2_LEVEL);
-        while (WB.isMethodQueuedForCompilation(method)) {
-            Thread.onSpinWait();
-        }
-        if (WB.getMethodCompilationLevel(method) != C2_LEVEL) {
-            throw new IllegalStateException("Method " + method + " is not compiled by C2.");
-        }
-    }
-
-    private void compileMethodWithSpacing(String methodName) throws Exception {
-        Method method = NewSparseCodeCache.class.getDeclaredMethod(methodName);
-
-        WB.markMethodProfiled(method);
-        WB.testSetDontInlineMethod(method, true);
-
-        compileWithC2(method);
-
-        WB.lockCompilation();
-        WB.allocateCodeBlob(codeRegionSize, BLOB_TYPE);
-        WB.unlockCompilation();
-    }
-
-    private void generateCode() throws Exception {
-        if ((codeRegionSize & (codeRegionSize - 1)) != 0) {
-            throw new IllegalArgumentException("codeRegionSize = " + codeRegionSize
-                + ". 'codeRegionSize' must be a power of 2.");
-        }
-
-        // Step 1: Compile method0-method3 with codeRegionSize gaps after each
-        for (int i = 0; i < activeMethodCount; i++) {
-            compileMethodWithSpacing("method" + i);
-        }
-
-        // Step 2: Allocate 128MB gap before callMethods()
-        WB.lockCompilation();
-        WB.allocateCodeBlob(LARGE_GAP_SIZE, BLOB_TYPE);
-        WB.unlockCompilation();
-
-        // Step 3: Compile callMethods()
-        compileCallMethods();
-
-        // Step 4: Fill remaining code cache with dummy blobs
-        WB.lockCompilation();
-        while (true) {
-            long blob = WB.allocateCodeBlob(DUMMY_BLOB_SIZE, BLOB_TYPE);
-            if (blob == 0) {
-                break;
-            }
-        }
-        WB.unlockCompilation();
-    }
-
-    private void compileCallMethods() throws Exception {
-        // Warmup callMethods before compilation
-        for (int i = 0; i < CALL_METHODS_WARMUP_ITERATIONS; i++) {
-            callMethods();
-        }
-
-        Method method = NewSparseCodeCache.class.getDeclaredMethod("callMethods");
-        WB.markMethodProfiled(method);
-        compileWithC2(method);
-        WB.testSetDontInlineMethod(method, true);
-    }
-
-    @Setup(Level.Trial)
-    public void setupCodeCache() throws Exception {
-        initWhiteBox();
-        generateCode();
-    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @SuppressWarnings("fallthrough")  // Intentional fallthrough to call all active methods
-    private void callMethods() {
-        switch (activeMethodCount) {
-            case 128:
-                method127();
-            case 127:
-                method126();
-            case 126:
-                method125();
-            case 125:
-                method124();
-            case 124:
-                method123();
-            case 123:
-                method122();
-            case 122:
-                method121();
-            case 121:
-                method120();
-            case 120:
-                method119();
-            case 119:
-                method118();
-            case 118:
-                method117();
-            case 117:
-                method116();
-            case 116:
-                method115();
-            case 115:
-                method114();
-            case 114:
-                method113();
-            case 113:
-                method112();
-            case 112:
-                method111();
-            case 111:
-                method110();
-            case 110:
-                method109();
-            case 109:
-                method108();
-            case 108:
-                method107();
-            case 107:
-                method106();
-            case 106:
-                method105();
-            case 105:
-                method104();
-            case 104:
-                method103();
-            case 103:
-                method102();
-            case 102:
-                method101();
-            case 101:
-                method100();
-            case 100:
-                method99();
-            case 99:
-                method98();
-            case 98:
-                method97();
-            case 97:
-                method96();
-            case 96:
-                method95();
-            case 95:
-                method94();
-            case 94:
-                method93();
-            case 93:
-                method92();
-            case 92:
-                method91();
-            case 91:
-                method90();
-            case 90:
-                method89();
-            case 89:
-                method88();
-            case 88:
-                method87();
-            case 87:
-                method86();
-            case 86:
-                method85();
-            case 85:
-                method84();
-            case 84:
-                method83();
-            case 83:
-                method82();
-            case 82:
-                method81();
-            case 81:
-                method80();
-            case 80:
-                method79();
-            case 79:
-                method78();
-            case 78:
-                method77();
-            case 77:
-                method76();
-            case 76:
-                method75();
-            case 75:
-                method74();
-            case 74:
-                method73();
-            case 73:
-                method72();
-            case 72:
-                method71();
-            case 71:
-                method70();
-            case 70:
-                method69();
-            case 69:
-                method68();
-            case 68:
-                method67();
-            case 67:
-                method66();
-            case 66:
-                method65();
-            case 65:
-                method64();
-            case 64:
-                method63();
-            case 63:
-                method62();
-            case 62:
-                method61();
-            case 61:
-                method60();
-            case 60:
-                method59();
-            case 59:
-                method58();
-            case 58:
-                method57();
-            case 57:
-                method56();
-            case 56:
-                method55();
-            case 55:
-                method54();
-            case 54:
-                method53();
-            case 53:
-                method52();
-            case 52:
-                method51();
-            case 51:
-                method50();
-            case 50:
-                method49();
-            case 49:
-                method48();
-            case 48:
-                method47();
-            case 47:
-                method46();
-            case 46:
-                method45();
-            case 45:
-                method44();
-            case 44:
-                method43();
-            case 43:
-                method42();
-            case 42:
-                method41();
-            case 41:
-                method40();
-            case 40:
-                method39();
-            case 39:
-                method38();
-            case 38:
-                method37();
-            case 37:
-                method36();
-            case 36:
-                method35();
-            case 35:
-                method34();
-            case 34:
-                method33();
-            case 33:
-                method32();
-            case 32:
-                method31();
-            case 31:
-                method30();
-            case 30:
-                method29();
-            case 29:
-                method28();
-            case 28:
-                method27();
-            case 27:
-                method26();
-            case 26:
-                method25();
-            case 25:
-                method24();
-            case 24:
-                method23();
-            case 23:
-                method22();
-            case 22:
-                method21();
-            case 21:
-                method20();
-            case 20:
-                method19();
-            case 19:
-                method18();
-            case 18:
-                method17();
-            case 17:
-                method16();
-            case 16:
-                method15();
-            case 15:
-                method14();
-            case 14:
-                method13();
-            case 13:
-                method12();
-            case 12:
-                method11();
-            case 11:
-                method10();
-            case 10:
-                method9();
-            case 9:
-                method8();
-            case 8:
-                method7();
-            case 7:
-                method6();
-            case 6:
-                method5();
-            case 5:
-                method4();
-            case 4:
-                method3();
-            case 3:
-                method2();
-            case 2:
-                method1();
-            case 1:
-                method0();
-        }
-    }
-
-    @Benchmark
-    @Warmup(iterations = BENCHMARK_WARMUP_ITERATIONS)
-    public void benchmarkCallMethods() {
-        callMethods();
-    }
 }
