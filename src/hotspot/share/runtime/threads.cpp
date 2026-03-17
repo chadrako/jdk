@@ -113,7 +113,7 @@
 #endif
 #ifdef COMPILER2
 #include "opto/idealGraphPrinter.hpp"
-#include "runtime/hotCodeGrouper.hpp"
+#include "runtime/hotCodeCollector.hpp"
 #endif
 #if INCLUDE_JFR
 #include "jfr/jfr.hpp"
@@ -801,7 +801,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
 
 #ifdef COMPILER2
   if (HotCodeHeap) {
-    HotCodeGrouper::initialize();
+    HotCodeCollector::initialize();
   }
 #endif // COMPILER2
 

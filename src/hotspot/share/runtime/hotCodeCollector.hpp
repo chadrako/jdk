@@ -23,22 +23,22 @@
  */
 
 #ifdef COMPILER2
-#ifndef SHARE_RUNTIME_HOTCODEGROUPER_HPP
-#define SHARE_RUNTIME_HOTCODEGROUPER_HPP
+#ifndef SHARE_RUNTIME_HOTCODECOLLECTOR_HPP
+#define SHARE_RUNTIME_HOTCODECOLLECTOR_HPP
 
 #include "code/codeCache.hpp"
 #include "runtime/javaThread.hpp"
 
 class ThreadSampler;
 
-class HotCodeGrouper : public JavaThread {
+class HotCodeCollector : public JavaThread {
  private:
   static bool _is_initialized;
 
   static int _new_c2_nmethods_count;
   static int _total_c2_nmethods_count;
 
-  HotCodeGrouper();
+  HotCodeCollector();
 
   static void do_grouping(ThreadSampler& sampler);
 
@@ -55,5 +55,5 @@ class HotCodeGrouper : public JavaThread {
   static bool is_nmethod_count_steady();
 };
 
-#endif // SHARE_RUNTIME_HOTCODEGROUPER_HPP
+#endif // SHARE_RUNTIME_HOTCODECOLLECTOR_HPP
 #endif // COMPILER2

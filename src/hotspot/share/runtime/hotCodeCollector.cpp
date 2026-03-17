@@ -29,55 +29,55 @@
 #include "compiler/compilerDefinitions.inline.hpp"
 #include "logging/log.hpp"
 #include "memory/resourceArea.hpp"
-#include "runtime/hotCodeGrouper.hpp"
+#include "runtime/hotCodeCollector.hpp"
 #include "runtime/hotCodeSampler.hpp"
 #include "runtime/java.hpp"
 #include "runtime/javaThread.inline.hpp"
 
 // Initalize static variables
-bool      HotCodeGrouper::_is_initialized = false;
-int       HotCodeGrouper::_new_c2_nmethods_count = 0;
-int       HotCodeGrouper::_total_c2_nmethods_count = 0;
+bool      HotCodeCollector::_is_initialized = false;
+int       HotCodeCollector::_new_c2_nmethods_count = 0;
+int       HotCodeCollector::_total_c2_nmethods_count = 0;
 
-HotCodeGrouper::HotCodeGrouper() : JavaThread(thread_entry) {}
+HotCodeCollector::HotCodeCollector() : JavaThread(thread_entry) {}
 
-void HotCodeGrouper::initialize() {
+void HotCodeCollector::initialize() {
   EXCEPTION_MARK;
 
-  assert(HotCodeHeap, "HotCodeGrouper requires HotCodeHeap enabled");
-  assert(CompilerConfig::is_c2_enabled(), "HotCodeGrouper requires C2 enabled");
-  assert(NMethodRelocation, "HotCodeGrouper requires NMethodRelocation enabled");
-  assert(HotCodeHeapSize > 0, "HotCodeHeapSize must be non-zero to use HotCodeGrouper");
-  assert(CodeCache::get_code_heap(CodeBlobType::MethodHot) != nullptr, "Hot code heap not found");
+  assert(HotCodeHeap, "HotCodeCollector requires HotCodeHeap enabled");
+  assert(CompilerConfig::is_c2_enabled(), "HotCodeCollector requires C2 enabled");
+  assert(NMethodRelocation, "HotCodeCollector requires NMethodRelocation enabled");
+  assert(HotCodeHeapSize > 0, "HotCodeHeapSize must be non-zero to use HotCodeCollector");
+  assert(CodeCache::get_code_heap(CodeBlobType::MethodHot) != nullptr, "MethodHot code heap not found");
 
-  Handle thread_oop = JavaThread::create_system_thread_object("HotCodeGrouperThread", CHECK);
-  HotCodeGrouper* thread = new HotCodeGrouper();
+  Handle thread_oop = JavaThread::create_system_thread_object("HotCodeCollectorThread", CHECK);
+  HotCodeCollector* thread = new HotCodeCollector();
   JavaThread::vm_exit_on_osthread_failure(thread);
   JavaThread::start_internal_daemon(THREAD, thread, thread_oop, NormPriority);
 
   _is_initialized = true;
 }
 
-bool HotCodeGrouper::is_nmethod_count_steady() {
+bool HotCodeCollector::is_nmethod_count_steady() {
   MutexLocker ml_CodeCache_lock(CodeCache_lock, Mutex::_no_safepoint_check_flag);
 
   if (_total_c2_nmethods_count <= 0) {
-    log_trace(hotcodegrouper)("C2 nmethod count not steady. Total C2 nmethods %d <= 0", _total_c2_nmethods_count);
+    log_trace(hotcode)("C2 nmethod count not steady. Total C2 nmethods %d <= 0", _total_c2_nmethods_count);
     return false;
   }
 
   const double ratio_new = (double)_new_c2_nmethods_count / _total_c2_nmethods_count;
   bool is_steady_nmethod_count = ratio_new < HotCodeSteadyThreshold;
 
-  log_info(hotcodegrouper)("C2 nmethod count %s", is_steady_nmethod_count ? "steady" : "not steady");
-  log_trace(hotcodegrouper)("\t- New: %d. Total: %d. Ratio: %f. Threshold: %f", _new_c2_nmethods_count, _total_c2_nmethods_count, ratio_new, HotCodeSteadyThreshold);
+  log_info(hotcode)("C2 nmethod count %s", is_steady_nmethod_count ? "steady" : "not steady");
+  log_trace(hotcode)("\t- New: %d. Total: %d. Ratio: %f. Threshold: %f", _new_c2_nmethods_count, _total_c2_nmethods_count, ratio_new, HotCodeSteadyThreshold);
 
   _new_c2_nmethods_count = 0;
 
   return is_steady_nmethod_count;
 }
 
-void HotCodeGrouper::thread_entry(JavaThread* thread, TRAPS) {
+void HotCodeCollector::thread_entry(JavaThread* thread, TRAPS) {
   // Initial sleep to allow JVM to warm up
   thread->sleep(HotCodeStartupDelaySeconds * 1000);
 
@@ -95,13 +95,13 @@ void HotCodeGrouper::thread_entry(JavaThread* thread, TRAPS) {
   }
 }
 
-void HotCodeGrouper::do_grouping(ThreadSampler& sampler) {
+void HotCodeCollector::do_grouping(ThreadSampler& sampler) {
   while (sampler.has_candidates()) {
 
     double ratio_from_hot = sampler.get_hot_sample_ratio();
-    log_trace(hotcodegrouper)("Ratio of samples from hot code heap: %f", ratio_from_hot);
+    log_trace(hotcode)("Ratio of samples from hot code heap: %f", ratio_from_hot);
     if (ratio_from_hot > HotCodeSampleRatio) {
-      log_info(hotcodegrouper)("Ratio of samples from hot nmethods (%f) over threshold (%f). Done grouping", ratio_from_hot, HotCodeSampleRatio);
+      log_info(hotcode)("Ratio of samples from hot nmethods (%f) over threshold (%f). Done grouping", ratio_from_hot, HotCodeSampleRatio);
       break;
     }
 
@@ -115,7 +115,7 @@ void HotCodeGrouper::do_grouping(ThreadSampler& sampler) {
   }
 }
 
-void HotCodeGrouper::do_relocation(ThreadSampler& sampler, void* candidate, int callee_level) {
+void HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, int callee_level) {
   if (candidate == nullptr) {
     return;
   }
@@ -143,7 +143,7 @@ void HotCodeGrouper::do_relocation(ThreadSampler& sampler, void* candidate, int 
 
   // Verify code heap has space
   if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)nm->size()) {
-    log_info(hotcodegrouper)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
+    log_info(hotcode)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
       CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), nm->size());
     return;
   }
@@ -175,7 +175,7 @@ void HotCodeGrouper::do_relocation(ThreadSampler& sampler, void* candidate, int 
   }
 }
 
-void HotCodeGrouper::unregister_nmethod(nmethod* nm) {
+void HotCodeCollector::unregister_nmethod(nmethod* nm) {
   assert_lock_strong(CodeCache_lock);
   if (!_is_initialized) {
     return;
@@ -194,7 +194,7 @@ void HotCodeGrouper::unregister_nmethod(nmethod* nm) {
   _total_c2_nmethods_count--;
 }
 
-void HotCodeGrouper::register_nmethod(nmethod* nm) {
+void HotCodeCollector::register_nmethod(nmethod* nm) {
   assert_lock_strong(CodeCache_lock);
   if (!_is_initialized) {
     return;

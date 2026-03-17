@@ -32,7 +32,7 @@
 ThreadSampler* ThreadSampler::_current_sampler = nullptr;
 
 void ThreadSampler::do_sampling(JavaThread* thread) {
-  log_info(hotcodegrouper)("Sampling...");
+  log_info(hotcode)("Sampling...");
 
   int total_samples = 0;
 
@@ -75,7 +75,7 @@ void ThreadSampler::do_sampling(JavaThread* thread) {
 
     // Check if we have sampled long enough
     if (os::javaTimeMillis() - start_time > HotCodeSampleSeconds * 1000) {
-      log_info(hotcodegrouper)("Profiling complete: collected %d samples corresponding to %d nmethods", total_samples, _samples.number_of_entries());
+      log_info(hotcode)("Profiling complete: collected %d samples corresponding to %d nmethods", total_samples, _samples.number_of_entries());
       generate_sorted_candidate_list();
       return;
     }

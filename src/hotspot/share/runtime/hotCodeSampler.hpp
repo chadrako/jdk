@@ -33,12 +33,12 @@
 
 // Minumum amount of time between samples
 static inline int64_t min_sampling_period_ms() {
-  return 5;
+  return HotCodeMinSamplingMs;
 }
 
 // Maximum amount of time between samples
 static inline int64_t max_sampling_period_ms() {
-  return 15;
+  return HotCodeMaxSamplingMs;
 }
 
 // Generate a random sampling period between min and max

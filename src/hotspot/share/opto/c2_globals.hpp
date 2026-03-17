@@ -897,37 +897,37 @@
   product(bool, HotCodeHeap, false, EXPERIMENTAL,                           \
           "Enable the code heap for hot C2 nmethods")                       \
                                                                             \
-  product(double, HotCodeSampleRatio, 0.8,                                  \
+  product(double, HotCodeSampleRatio, 0.8, EXPERIMENTAL,                    \
           "Minimum ratio of profiling samples that must be in "             \
           "the MethodHot heap before stopping grouping")                    \
           range(0.0, 1.0)                                                   \
                                                                             \
-  product(double, HotCodeSteadyThreshold, 0.05,                             \
+  product(double, HotCodeSteadyThreshold, 0.05, EXPERIMENTAL,               \
           "Maximum ratio of newly compiled to total C2 nmethods "           \
           "to treat nmethod count as stable")                               \
           range(0.0, 1.0)                                                   \
                                                                             \
-  product(uintx, HotCodeIntervalSeconds, 300,                               \
+  product(uintx, HotCodeIntervalSeconds, 300, EXPERIMENTAL,                 \
           "Seconds between hot code grouping attempts")                     \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeSampleSeconds, 120,                                 \
+  product(uintx, HotCodeSampleSeconds, 120, EXPERIMENTAL,                   \
           "Seconds to sample application threads per grouping attempt")     \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeStartupDelaySeconds, 120,                           \
+  product(uintx, HotCodeStartupDelaySeconds, 120, EXPERIMENTAL,             \
           "Seconds to delay before starting hot code grouping thread")      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeMinSamplingMs, 5,                                   \
+  product(uintx, HotCodeMinSamplingMs, 5, EXPERIMENTAL,                     \
           "Minimum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeMaxSamplingMs, 15,                                  \
+  product(uintx, HotCodeMaxSamplingMs, 15, EXPERIMENTAL,                    \
           "Maximum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeCalleeLevel, 0,                                     \
+  product(uintx, HotCodeCalleeLevel, 0, EXPERIMENTAL,                       \
           "Number of levels of callees to relocate per candidate")          \
           range(0, max_juint)                                               \
 

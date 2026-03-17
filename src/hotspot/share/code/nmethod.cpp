@@ -67,7 +67,7 @@
 #include "runtime/frame.inline.hpp"
 #include "runtime/handles.inline.hpp"
 #ifdef COMPILER2
-#include "runtime/hotCodeGrouper.hpp"
+#include "runtime/hotCodeCollector.hpp"
 #endif // COMPILER2
 #include "runtime/jniHandles.inline.hpp"
 #include "runtime/orderAccess.hpp"
@@ -1258,7 +1258,7 @@ void nmethod::post_init() {
   Universe::heap()->register_nmethod(this);
 
 #ifdef COMPILER2
-  HotCodeGrouper::register_nmethod(this);
+  HotCodeCollector::register_nmethod(this);
 #endif // COMPILER2
 
   DEBUG_ONLY(Universe::heap()->verify_nmethod(this));
@@ -2470,7 +2470,7 @@ void nmethod::purge(bool unregister_nmethod) {
   }
 
 #ifdef COMPILER2
-  HotCodeGrouper::unregister_nmethod(this);
+  HotCodeCollector::unregister_nmethod(this);
 #endif // COMPILER2
 
   CodeCache::unregister_old_nmethod(this);

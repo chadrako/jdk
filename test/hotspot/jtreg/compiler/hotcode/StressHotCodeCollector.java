@@ -30,10 +30,10 @@
  * @run main/othervm -Xbootclasspath/a:. -Xcomp -XX:-TieredCompilation -XX:+UnlockExperimentalVMOptions -XX:+HotCodeHeap -XX:+NMethodRelocation
  *                   -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -XX:HotCodeIntervalSeconds=0 -XX:HotCodeSampleSeconds=10
  *                   -XX:HotCodeSteadyThreshold=1 -XX:HotCodeSampleRatio=1 -XX:HotCodeStartupDelaySeconds=0
- *                   compiler.hotcodegrouper.StressHotCodeGrouper
+ *                   compiler.hotcode.StressHotCodeCollector
  */
 
-package compiler.hotcodegrouper;
+package compiler.hotcode;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -42,7 +42,7 @@ import java.util.Random;
 import jdk.test.lib.compiler.InMemoryJavaCompiler;
 import jdk.test.whitebox.WhiteBox;
 
-public class StressHotCodeGrouper {
+public class StressHotCodeCollector {
 
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
 

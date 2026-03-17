@@ -30,10 +30,10 @@
  * @run main/othervm -Xbootclasspath/a:. -Xbatch -XX:-TieredCompilation -XX:+UnlockExperimentalVMOptions -XX:+HotCodeHeap
  *                   -XX:+NMethodRelocation -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -XX:HotCodeIntervalSeconds=0
  *                   -XX:HotCodeSampleSeconds=5 -XX:HotCodeSteadyThreshold=1 -XX:HotCodeSampleRatio=1 -XX:HotCodeStartupDelaySeconds=0
- *                   compiler.hotcodegrouper.HotCodeGrouperMoveFunction
+ *                   compiler.hotcode.HotCodeCollectorMoveFunction
  */
 
-package compiler.hotcodegrouper;
+package compiler.hotcode;
 
 import java.lang.reflect.Method;
 
@@ -42,7 +42,7 @@ import jdk.test.whitebox.WhiteBox;
 import jdk.test.whitebox.code.BlobType;
 import jdk.test.whitebox.code.NMethod;
 
-public class HotCodeGrouperMoveFunction {
+public class HotCodeCollectorMoveFunction {
 
     private static final WhiteBox WHITE_BOX = WhiteBox.getWhiteBox();
     private static final Method method;
@@ -50,7 +50,7 @@ public class HotCodeGrouperMoveFunction {
 
     static {
         try {
-            method = HotCodeGrouperMoveFunction.class.getMethod("func");
+            method = HotCodeCollectorMoveFunction.class.getMethod("func");
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -66,10 +66,10 @@ public class HotCodeGrouperMoveFunction {
         Asserts.assertNotEquals(orig_nm, null);
         Asserts.assertEQ(orig_nm.code_blob_type, BlobType.MethodNonProfiled);
 
-        // Call function so grouper samples and relocates
+        // Call function so collector samples and relocates
         func();
 
-        // Function should now be in the Hot code heap after grouper has had time to relocate
+        // Function should now be in the Hot code heap after collector has had time to relocate
         NMethod reloc_nm = NMethod.get(method, false);
         Asserts.assertNotEquals(reloc_nm, null);
         Asserts.assertEQ(reloc_nm.code_blob_type, BlobType.MethodHot);

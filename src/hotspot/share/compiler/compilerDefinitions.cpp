@@ -328,22 +328,19 @@ void CompilerConfig::set_compilation_policy_flags() {
       }
     }
   }
-#ifdef COMPILER2
-  else if (HotCodeHeap && FLAG_IS_DEFAULT(SegmentedCodeCache)) {
-    FLAG_SET_ERGO(SegmentedCodeCache, true);
-  }
 
+#ifdef COMPILER2
   if (HotCodeHeap) {
+    if (FLAG_IS_DEFAULT(SegmentedCodeCache)) {
+      FLAG_SET_ERGO(SegmentedCodeCache, true);
+    } else if (!SegmentedCodeCache) {
+      vm_exit_during_initialization("HotCodeHeap requires SegmentedCodeCache enabled");
+    }
+
     if (FLAG_IS_DEFAULT(NMethodRelocation)) {
       FLAG_SET_ERGO(NMethodRelocation, true);
-    }
-
-    if (!NMethodRelocation) {
+    } else if (!NMethodRelocation) {
       vm_exit_during_initialization("HotCodeHeap requires NMethodRelocation enabled");
-    }
-
-    if (!SegmentedCodeCache) {
-      vm_exit_during_initialization("HotCodeHeap requires SegmentedCodeCache enabled");
     }
 
     if (!is_c2_enabled()) {

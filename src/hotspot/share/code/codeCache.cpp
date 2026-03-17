@@ -254,14 +254,19 @@ void CodeCache::initialize_heaps() {
       // An application usually has ~20% hot code which is mostly non-profiled code.
       // We set the hot code heap size to 20% of the non-profiled code heap.
       hot.size = MAX2((2 * non_profiled.size) / 10, min_size);
-    }
-    if (!(non_profiled.set && hot.set)) {
-      if (hot.size > non_profiled.size) {
-        err_msg msg("Hot (%zuK) exceeds NonProfiled (%zuK).",
-                hot.size / K, non_profiled.size / K);
+
+      if (non_profiled.set) {
+        err_msg msg("Must manually set ");
         vm_exit_during_initialization("Invalid code heap sizes", msg);
       }
+
       non_profiled.size -= hot.size;
+    }
+
+    if (hot.size > non_profiled.size) {
+      err_msg msg("Hot (%zuK) exceeds NonProfiled (%zuK).",
+              hot.size / K, non_profiled.size / K);
+      vm_exit_during_initialization("Invalid code heap sizes", msg);
     }
   }
 
@@ -448,8 +453,8 @@ bool CodeCache::heap_available(CodeBlobType code_blob_type) {
     // Interpreter only: we don't need any method code heaps
     return (code_blob_type == CodeBlobType::NonNMethod);
   } else if (CompilerConfig::is_c1_profiling()) {
-    // Tiered compilation: use all code heaps
-    // except the hot code heap unless it is requested.
+    // Tiered compilation: use all code heaps including
+    // the hot code heap when it is present.
 
     if (COMPILER2_PRESENT(!HotCodeHeap &&) (code_blob_type == CodeBlobType::MethodHot)) {
       return false;
