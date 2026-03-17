@@ -897,15 +897,15 @@
   product(bool, HotCodeHeap, false, EXPERIMENTAL,                           \
           "Enable the code heap for hot C2 nmethods")                       \
                                                                             \
-  product(double, HotCodeSampleRatio, 0.8, EXPERIMENTAL,                    \
-          "Minimum ratio of profiling samples that must be in "             \
-          "the MethodHot heap before stopping grouping")                    \
-          range(0.0, 1.0)                                                   \
+  product(double, HotCodeSamplePercent, 80, EXPERIMENTAL,                   \
+          "Minimum percentage of profiling samples that must be in "        \
+          "the MethodHot heap before stopping hot code collection")         \
+          range(0, 100)                                                     \
                                                                             \
-  product(double, HotCodeSteadyThreshold, 0.05, EXPERIMENTAL,               \
-          "Maximum ratio of newly compiled to total C2 nmethods "           \
+  product(double, HotCodeStablePercent, 5, EXPERIMENTAL,                    \
+          "Maximum percentage of newly compiled to total C2 nmethods "      \
           "to treat nmethod count as stable")                               \
-          range(0.0, 1.0)                                                   \
+          range(0, DBL_MAX)                                                 \
                                                                             \
   product(uintx, HotCodeIntervalSeconds, 300, EXPERIMENTAL,                 \
           "Seconds between hot code grouping attempts")                     \
@@ -927,7 +927,7 @@
           "Maximum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeCalleeLevel, 0, EXPERIMENTAL,                       \
+  product(uintx, HotCodeCallLevel, 0, EXPERIMENTAL,                         \
           "Number of levels of callees to relocate per candidate")          \
           range(0, max_juint)                                               \
 

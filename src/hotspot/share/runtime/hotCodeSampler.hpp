@@ -101,8 +101,8 @@ class ThreadSampler : public StackObj {
   }
 
   // Get ratio of C2 samples from hot code heap
-  double get_hot_sample_ratio() {
-    return (double) _hot_sample_count / (_hot_sample_count + _non_profiled_sample_count);
+  double get_hot_sample_percent() {
+    return 100.0 * _hot_sample_count / (_hot_sample_count + _non_profiled_sample_count);
   }
 
   // Update the number of samples from hot code heap after relocating nmethod

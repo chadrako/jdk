@@ -42,7 +42,7 @@ class HotCodeCollector : public JavaThread {
 
   static void do_grouping(ThreadSampler& sampler);
 
-  static void do_relocation(ThreadSampler& sampler, void* candidate, int callee_level);
+  static int do_relocation(ThreadSampler& sampler, void* candidate, uintx call_level);
 
  public:
 
@@ -51,7 +51,6 @@ class HotCodeCollector : public JavaThread {
   static void unregister_nmethod(nmethod* nm);
   static void register_nmethod(nmethod* nm);
 
-  static bool hot_heap_has_space(size_t size);
   static bool is_nmethod_count_steady();
 };
 

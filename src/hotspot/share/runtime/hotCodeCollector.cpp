@@ -62,15 +62,15 @@ bool HotCodeCollector::is_nmethod_count_steady() {
   MutexLocker ml_CodeCache_lock(CodeCache_lock, Mutex::_no_safepoint_check_flag);
 
   if (_total_c2_nmethods_count <= 0) {
-    log_trace(hotcode)("C2 nmethod count not steady. Total C2 nmethods %d <= 0", _total_c2_nmethods_count);
+    log_info(hotcode)("No registered C2 nmethods");
     return false;
   }
 
-  const double ratio_new = (double)_new_c2_nmethods_count / _total_c2_nmethods_count;
-  bool is_steady_nmethod_count = ratio_new < HotCodeSteadyThreshold;
+  const double percent_new = 100.0 * _new_c2_nmethods_count / _total_c2_nmethods_count;
+  bool is_steady_nmethod_count = percent_new < HotCodeStablePercent;
 
   log_info(hotcode)("C2 nmethod count %s", is_steady_nmethod_count ? "steady" : "not steady");
-  log_trace(hotcode)("\t- New: %d. Total: %d. Ratio: %f. Threshold: %f", _new_c2_nmethods_count, _total_c2_nmethods_count, ratio_new, HotCodeSteadyThreshold);
+  log_debug(hotcode)("C2 nmethod stats: New: %d, Total: %d, Percent new: %f", _new_c2_nmethods_count, _total_c2_nmethods_count, percent_new);
 
   _new_c2_nmethods_count = 0;
 
@@ -96,12 +96,14 @@ void HotCodeCollector::thread_entry(JavaThread* thread, TRAPS) {
 }
 
 void HotCodeCollector::do_grouping(ThreadSampler& sampler) {
+  int num_relocated = 0;
+
   while (sampler.has_candidates()) {
 
-    double ratio_from_hot = sampler.get_hot_sample_ratio();
-    log_trace(hotcode)("Ratio of samples from hot code heap: %f", ratio_from_hot);
-    if (ratio_from_hot > HotCodeSampleRatio) {
-      log_info(hotcode)("Ratio of samples from hot nmethods (%f) over threshold (%f). Done grouping", ratio_from_hot, HotCodeSampleRatio);
+    double percent_from_hot = sampler.get_hot_sample_percent();
+    log_debug(hotcode)("Percentage of samples from hot code heap: %f", percent_from_hot);
+    if (percent_from_hot >= HotCodeSamplePercent) {
+      log_info(hotcode)("Percentage of samples from hot nmethods over threshold. Done collecting hot code");
       break;
     }
 
@@ -111,25 +113,27 @@ void HotCodeCollector::do_grouping(ThreadSampler& sampler) {
     MutexLocker ml_CompiledIC_lock(CompiledIC_lock, Mutex::_no_safepoint_check_flag);
     MutexLocker ml_CodeCache_lock(CodeCache_lock, Mutex::_no_safepoint_check_flag);
 
-    do_relocation(sampler, candidate, HotCodeCalleeLevel);
+    num_relocated += do_relocation(sampler, candidate, 0);
   }
+
+  log_info(hotcode)("Collection done. Relocated %d nmethods to the MethodHot heap", num_relocated);
 }
 
-void HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, int callee_level) {
+int HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, uintx call_level) {
   if (candidate == nullptr) {
-    return;
+    return 0;
   }
 
   // Verify that address still points to CodeBlob
   CodeBlob* blob = CodeCache::find_blob(candidate);
   if (blob == nullptr) {
-    return;
+    return 0;
   }
 
   // Verify that blob is nmethod
   nmethod* nm = blob->as_nmethod_or_null();
   if (nm == nullptr) {
-    return;
+    return 0;
   }
 
   // The candidate may have been recompiled or already relocated.
@@ -138,25 +142,30 @@ void HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, in
 
   // Verify the nmethod is stil valid for relocation
   if (nm == nullptr || !nm->is_in_use() || !nm->is_compiled_by_c2()) {
-    return;
+    return 0;
   }
 
   // Verify code heap has space
   if (CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity() < (size_t)nm->size()) {
-    log_info(hotcode)("Not enough space in HotCodeHeap (%zd bytes) to relocate nm (%d bytes). Bailing out",
+    log_info(hotcode)("Not enough free space in MethodHot heap (%zd bytes) to relocate nm (%d bytes). Bailing out",
       CodeCache::get_code_heap(CodeBlobType::MethodHot)->unallocated_capacity(), nm->size());
-    return;
+    return 0;
   }
+
+  // Number of nmethods relocated (candidate + callees)
+  int num_relocated = 0;
 
   // Perform relocation
   if (CodeCache::get_code_blob_type(nm) != CodeBlobType::MethodHot) {
     CompiledICLocker ic_locker(nm);
     if (nm->relocate(CodeBlobType::MethodHot) != nullptr) {
+      log_debug(hotcode)("Relocated: nmethod (%p), method (%s), call level (%ld)", nm, nm->method()->name_and_sig_as_C_string(), call_level);
       sampler.update_sample_count(nm);
+      num_relocated++;
     }
   }
 
-  if (callee_level > 0) {
+  if (call_level < HotCodeCallLevel) {
     // Loop over relocations to relocate callees
     RelocIterator relocIter(nm);
     while (relocIter.next()) {
@@ -170,9 +179,11 @@ void HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, in
       address dest = ((CallRelocation*) reloc)->destination();
 
       // Recursively relocate callees
-      do_relocation(sampler, dest, callee_level - 1);
+      num_relocated += do_relocation(sampler, dest, call_level + 1);
     }
   }
+
+  return num_relocated;
 }
 
 void HotCodeCollector::unregister_nmethod(nmethod* nm) {
