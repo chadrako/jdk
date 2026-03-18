@@ -907,27 +907,27 @@
           "to treat nmethod count as stable")                               \
           range(0, DBL_MAX)                                                 \
                                                                             \
-  product(uintx, HotCodeIntervalSeconds, 300, EXPERIMENTAL,                 \
+  product(uint, HotCodeIntervalSeconds, 300, EXPERIMENTAL,                  \
           "Seconds between hot code grouping attempts")                     \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeSampleSeconds, 120, EXPERIMENTAL,                   \
+  product(uint, HotCodeSampleSeconds, 120, EXPERIMENTAL,                    \
           "Seconds to sample application threads per grouping attempt")     \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeStartupDelaySeconds, 120, EXPERIMENTAL,             \
+  product(uint, HotCodeStartupDelaySeconds, 120, EXPERIMENTAL,              \
           "Seconds to delay before starting hot code grouping thread")      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeMinSamplingMs, 5, EXPERIMENTAL,                     \
+  product(uint, HotCodeMinSamplingMs, 5, EXPERIMENTAL,                      \
           "Minimum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeMaxSamplingMs, 15, EXPERIMENTAL,                    \
+  product(uint, HotCodeMaxSamplingMs, 15, EXPERIMENTAL,                     \
           "Maximum sampling interval in milliseconds")                      \
           range(0, max_juint)                                               \
                                                                             \
-  product(uintx, HotCodeCallLevel, 0, EXPERIMENTAL,                         \
+  product(uint, HotCodeCallLevel, 0, EXPERIMENTAL,                          \
           "Number of levels of callees to relocate per candidate")          \
           range(0, max_juint)                                               \
 

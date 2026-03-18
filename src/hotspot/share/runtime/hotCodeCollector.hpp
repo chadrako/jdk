@@ -42,7 +42,7 @@ class HotCodeCollector : public JavaThread {
 
   static void do_grouping(ThreadSampler& sampler);
 
-  static int do_relocation(ThreadSampler& sampler, void* candidate, uintx call_level);
+  static int do_relocation(ThreadSampler& sampler, void* candidate, uint call_level);
 
  public:
 

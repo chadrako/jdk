@@ -119,7 +119,7 @@ void HotCodeCollector::do_grouping(ThreadSampler& sampler) {
   log_info(hotcode)("Collection done. Relocated %d nmethods to the MethodHot heap", num_relocated);
 }
 
-int HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, uintx call_level) {
+int HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, uint call_level) {
   if (candidate == nullptr) {
     return 0;
   }
@@ -159,7 +159,7 @@ int HotCodeCollector::do_relocation(ThreadSampler& sampler, void* candidate, uin
   if (CodeCache::get_code_blob_type(nm) != CodeBlobType::MethodHot) {
     CompiledICLocker ic_locker(nm);
     if (nm->relocate(CodeBlobType::MethodHot) != nullptr) {
-      log_debug(hotcode)("Relocated: nmethod (%p), method (%s), call level (%ld)", nm, nm->method()->name_and_sig_as_C_string(), call_level);
+      log_debug(hotcode)("Relocated: nmethod (%p), method (%s), call level (%d)", nm, nm->method()->name_and_sig_as_C_string(), call_level);
       sampler.update_sample_count(nm);
       num_relocated++;
     }

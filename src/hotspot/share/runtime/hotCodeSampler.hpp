@@ -32,17 +32,17 @@
 #include "utilities/resizableHashTable.hpp"
 
 // Minumum amount of time between samples
-static inline int64_t min_sampling_period_ms() {
+static inline uint min_sampling_period_ms() {
   return HotCodeMinSamplingMs;
 }
 
 // Maximum amount of time between samples
-static inline int64_t max_sampling_period_ms() {
+static inline uint max_sampling_period_ms() {
   return HotCodeMaxSamplingMs;
 }
 
 // Generate a random sampling period between min and max
-static inline int64_t rand_sampling_period_ms() {
+static inline uint rand_sampling_period_ms() {
   return os::random() % (max_sampling_period_ms() - min_sampling_period_ms() + 1) + min_sampling_period_ms();
 }
 
