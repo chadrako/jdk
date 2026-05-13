@@ -50,6 +50,8 @@ public class HotCodeCollectorMoveFunction {
     private static final int C2_LEVEL = 4;
     private static final int FUNC_RUN_MILLIS = 60_000;
 
+    private static long blackhole = 0;
+
     static {
         try {
             method = HotCodeCollectorMoveFunction.class.getMethod("func");
@@ -82,7 +84,13 @@ public class HotCodeCollectorMoveFunction {
 
     public static void func() {
         long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < FUNC_RUN_MILLIS) {}
+        long num = 0;
+        while (System.currentTimeMillis() - start < FUNC_RUN_MILLIS) {
+            for (int i = 0; i < 1_000_000; i++) {
+                num += i;
+            }
+        }
+        blackhole = num;
     }
 
 }
