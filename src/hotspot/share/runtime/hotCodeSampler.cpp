@@ -69,6 +69,9 @@ void ThreadSampler::sample_all_java_threads() {
     } else {
       pcs_not_in_codecache++;
     }
+
+    log_debug(hotcode)("Sampled thread '%s' state=%d pc=%p in_codecache=%d",
+                       jt->name(), (int)jt->thread_state(), pc, CodeCache::contains(pc));
   }
 
   log_debug(hotcode)("Sample pass: sampled=%d pc_null=%d pc_not_in_codecache=%d pc_not_nmethod=%d pc_nmethod=%d",
