@@ -83,13 +83,15 @@ public class HotCodeCollectorMoveFunction {
     }
 
     public static void func() {
-        long start = System.currentTimeMillis();
         long num = 0;
+
+        long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < FUNC_RUN_MILLIS) {
-            for (int i = 0; i < 1_000_000; i++) {
+            for (int i = 0; i < Integer.MAX_VALUE; i++) {
                 num += i;
             }
         }
+
         blackhole = num;
     }
 
