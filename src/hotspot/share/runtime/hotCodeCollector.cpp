@@ -255,5 +255,11 @@ void HotCodeCollector::register_nmethod(nmethod* nm) {
   // CodeCache_lock is held, so we can safely increment the count.
   _new_c2_nmethods_count++;
   _total_c2_nmethods_count++;
+
+  log_debug(hotcode)("Registered C2 nmethod: nm=" PTR_FORMAT " blob_type=%d method=%s "
+                     "(new=%d, total=%d)",
+                     p2i(nm), (int)CodeCache::get_code_blob_type(nm),
+                     nm->method() != nullptr ? nm->method()->name_and_sig_as_C_string() : "<null>",
+                     _new_c2_nmethods_count, _total_c2_nmethods_count);
 }
 #endif // COMPILER2

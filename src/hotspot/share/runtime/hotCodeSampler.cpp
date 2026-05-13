@@ -30,6 +30,12 @@
 #include "runtime/javaThread.inline.hpp"
 
 void ThreadSampler::sample_all_java_threads() {
+  int threads_sampled = 0;
+  int pcs_null = 0;
+  int pcs_not_in_codecache = 0;
+  int pcs_not_nmethod = 0;
+  int pcs_nmethod = 0;
+
   // Collect samples for each JavaThread
   for (JavaThreadIteratorWithHandle jtiwh; JavaThread *jt = jtiwh.next(); ) {
     if (jt->is_hidden_from_external_view() ||
@@ -38,36 +44,50 @@ void ThreadSampler::sample_all_java_threads() {
       continue;
     }
 
+    threads_sampled++;
     GetPCTask task(jt);
     task.run();
     address pc = task.pc();
     if (pc == nullptr) {
+      pcs_null++;
       continue;
     }
 
     if (CodeCache::contains(pc)) {
       nmethod* nm = CodeCache::find_blob(pc)->as_nmethod_or_null();
       if (nm != nullptr) {
+        pcs_nmethod++;
         bool created = false;
         int *count = _samples.put_if_absent(nm, 0, &created);
         (*count)++;
         if (created) {
           _samples.maybe_grow();
         }
+      } else {
+        pcs_not_nmethod++;
       }
+    } else {
+      pcs_not_in_codecache++;
     }
   }
+
+  log_debug(hotcode)("Sample pass: sampled=%d pc_null=%d pc_not_in_codecache=%d pc_not_nmethod=%d pc_nmethod=%d",
+                     threads_sampled, pcs_null, pcs_not_in_codecache, pcs_not_nmethod, pcs_nmethod);
 }
 
 Candidates::Candidates(ThreadSampler& sampler)
   : _hot_sample_count(0), _non_profiled_sample_count(0) {
   auto func = [&](nmethod* nm, int count) {
-    if (CodeCache::get_code_blob_type(nm) == CodeBlobType::MethodNonProfiled) {
+    CodeBlobType bt = CodeCache::get_code_blob_type(nm);
+    if (bt == CodeBlobType::MethodNonProfiled) {
       _candidates.append(Pair<nmethod*, int>(nm, count));
       add_non_profiled_sample_count(count);
-    } else if (CodeCache::get_code_blob_type(nm) == CodeBlobType::MethodHot) {
+    } else if (bt == CodeBlobType::MethodHot) {
       add_hot_sample_count(count);
     }
+    log_debug(hotcode)("Sample nmethod=%p blob_type=%d count=%d method=%s",
+                       nm, (int)bt, count,
+                       (nm != nullptr && nm->method() != nullptr) ? nm->method()->name_and_sig_as_C_string() : "<null>");
   };
   sampler.iterate_samples(func);
 
