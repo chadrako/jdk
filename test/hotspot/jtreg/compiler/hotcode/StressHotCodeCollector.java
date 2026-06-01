@@ -30,8 +30,8 @@
  * @library /test/lib /
  * @build jdk.test.whitebox.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
- * @run main/othervm -Xbootclasspath/a:. -Xcomp -XX:-TieredCompilation -XX:+UnlockExperimentalVMOptions -XX:+HotCodeHeap -XX:+NMethodRelocation
- *                   -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -XX:HotCodeIntervalSeconds=0 -XX:HotCodeSampleSeconds=10
+ * @run main/othervm -Xbootclasspath/a:. -Xcomp -XX:-TieredCompilation -XX:+SegmentedCodeCache -XX:+UnlockExperimentalVMOptions -XX:+HotCodeHeap
+ *                   -XX:+NMethodRelocation -XX:+UnlockDiagnosticVMOptions -XX:+WhiteBoxAPI -XX:HotCodeIntervalSeconds=0 -XX:HotCodeSampleSeconds=10
  *                   -XX:HotCodeStablePercent=-1 -XX:HotCodeSamplePercent=100 -XX:HotCodeStartupDelaySeconds=0
  *                   compiler.hotcode.StressHotCodeCollector
  */
