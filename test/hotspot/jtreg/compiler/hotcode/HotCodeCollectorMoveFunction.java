@@ -79,6 +79,8 @@ public class HotCodeCollectorMoveFunction {
         private static final int C2_LEVEL = 4;
         private static final int FUNC_RUN_MILLIS = 60_000;
 
+        private static volatile int blackholeCount = 0;
+
         static {
             try {
                 method = Runner.class.getMethod("func");
