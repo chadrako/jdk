@@ -22,13 +22,13 @@
  *
  */
 
-#include "runtime/mutex.hpp"
-#include "runtime/mutexLocker.hpp"
 #ifdef COMPILER2
 #ifndef SHARE_RUNTIME_HOTCODESAMPLER_HPP
 #define SHARE_RUNTIME_HOTCODESAMPLER_HPP
 
 #include "runtime/javaThread.hpp"
+#include "runtime/mutex.hpp"
+#include "runtime/mutexLocker.hpp"
 #include "runtime/suspendedThreadTask.hpp"
 #include "runtime/threadSMR.hpp"
 #include "utilities/pair.hpp"
