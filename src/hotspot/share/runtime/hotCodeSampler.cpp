@@ -30,9 +30,6 @@
 #include "runtime/javaThread.inline.hpp"
 
 void ThreadSampler::sample_all_java_threads() {
-  // Hold Threads_lock to coordinate with other samplers (such as JFR)
-  MutexLocker ml(Threads_lock);
-
   // Collect samples for each JavaThread
   for (JavaThreadIteratorWithHandle jtiwh; JavaThread *jt = jtiwh.next(); ) {
     if (jt->is_hidden_from_external_view() ||
@@ -42,7 +39,7 @@ void ThreadSampler::sample_all_java_threads() {
     }
 
     GetPCTask task(jt);
-    task.run();
+    task.request_pc();
     address pc = task.pc();
     if (pc == nullptr) {
       continue;
