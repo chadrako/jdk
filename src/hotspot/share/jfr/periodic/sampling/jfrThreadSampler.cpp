@@ -292,9 +292,15 @@ class OSThreadSampler : public SuspendedThreadTask {
   OSThreadSampler(JavaThread* jt) : SuspendedThreadTask(jt),
                                     _result(THREAD_SUSPENSION_ERROR) {}
   void request_sample() {
-    ConditionalMutexLocker ml(Thread::current(), SuspendedThreadTask_lock,
-                              COMPILER2_PRESENT(HotCodeHeap) NOT_COMPILER2(false),
-                              Mutex::_no_safepoint_check_flag);
+#ifdef COMPILER2
+    if (HotCodeHeap) {
+      JfrMutexTryLock try_lock(SuspendedThreadTask_lock);
+      if (try_lock.acquired()) {
+        run();
+      }
+      return;
+    }
+#endif
     run();
   }
 
