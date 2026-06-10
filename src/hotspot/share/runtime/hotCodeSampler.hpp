@@ -27,8 +27,6 @@
 #define SHARE_RUNTIME_HOTCODESAMPLER_HPP
 
 #include "runtime/javaThread.hpp"
-#include "runtime/mutex.hpp"
-#include "runtime/mutexLocker.hpp"
 #include "runtime/suspendedThreadTask.hpp"
 #include "runtime/threadSMR.hpp"
 #include "utilities/pair.hpp"
@@ -76,17 +74,6 @@ class GetPCTask : public SuspendedThreadTask {
 
  public:
   GetPCTask(JavaThread* thread) : SuspendedThreadTask(thread), _pc(nullptr) {}
-
-  void request_pc() {
-#if INCLUDE_JFR
-    if (SuspendedThreadTask_lock->try_lock()) {
-      run();
-      SuspendedThreadTask_lock->unlock();
-    }
-#else
-    run();
-#endif
-  }
 
   address pc() const {
     return _pc;

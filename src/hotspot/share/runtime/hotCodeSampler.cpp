@@ -29,6 +29,12 @@
 #include "runtime/hotCodeSampler.hpp"
 #include "runtime/javaThread.inline.hpp"
 
+#if INCLUDE_JFR
+#include "jfr/utilities/jfrTryLock.hpp"
+
+using SuspendedThreadTaskTryLock = JfrMutexTryLock;
+#endif
+
 void ThreadSampler::sample_all_java_threads() {
   // Collect samples for each JavaThread
   for (JavaThreadIteratorWithHandle jtiwh; JavaThread *jt = jtiwh.next(); ) {
@@ -39,7 +45,17 @@ void ThreadSampler::sample_all_java_threads() {
     }
 
     GetPCTask task(jt);
-    task.request_pc();
+    {
+#if INCLUDE_JFR
+      SuspendedThreadTaskTryLock try_lock(SuspendedThreadTask_lock);
+      if (!try_lock.acquired()) {
+        log_debug(hotcode)("Suspend lock held by JFR sampler; ending sampling pass, will retry next round");
+        return;
+      }
+#endif
+      task.run();
+    }
+
     address pc = task.pc();
     if (pc == nullptr) {
       continue;
