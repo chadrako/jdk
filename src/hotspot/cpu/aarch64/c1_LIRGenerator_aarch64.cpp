@@ -722,7 +722,8 @@ LIR_Opr LIRGenerator::atomic_cmpxchg(BasicType type, LIR_Opr addr, LIRItem& cmp_
     ShouldNotReachHere();
     Unimplemented();
   }
-  __ logical_xor(FrameMap::r8_opr, LIR_OprFact::intConst(1), result);
+  __ cmove(lir_cond_equal, LIR_OprFact::intConst(1), LIR_OprFact::intConst(0),
+           result, T_INT);
   return result;
 }
 
